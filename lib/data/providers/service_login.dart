@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class ServiceLogin {
-  String url = 'http://192.168.3.12:3000';
+  String url = 'http://192.168.3.13:3000';
 
   Future<Usuario?> login(String usuario, String contrasena) async {
     final url = Uri.parse('${this.url}/usuarios/login');

@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ServiceClient {
-  String url = 'http://192.168.3.12:3000';
+  String url = 'http://192.168.3.13:3000';
 
-  Future<List<dynamic>> combi() async {
+  Future<List<dynamic>> combis() async {
     final url = Uri.parse('${this.url}/combis');
     final headers = {'Content-Type': 'application/json'};
 

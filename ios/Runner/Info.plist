@@ -45,5 +45,12 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Esta aplicación necesita acceso a tu ubicación</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Se requiere acceso a la ubicación para funcionalidades en segundo plano</string>
+
+	
 </dict>
 </plist>

@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'package:app_ruta/data/providers/service_client.dart';
+import 'package:app_ruta/services/preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:location/location.dart';
-import 'dart:async';
 
 class MapPageCliente extends StatefulWidget {
   @override
@@ -13,28 +13,49 @@ class _MapPageClienteState extends State<MapPageCliente> {
   late Future<List<dynamic>> combisFuture;
   List<dynamic> combisData = [];
   Map<String, List<LatLng>> routePaths = {};
+
   GoogleMapController? _mapController;
   Set<Polyline> _polylines = {};
   Set<Marker> _markers = {};
-  Location _location = Location();
+
+  // Variable para almacenar el trayecto (recorrido) del combi
+  List<LatLng> combiPath = [];
+
+  // Valor seleccionado en el Dropdown (ej: "Línea 3")
   String _selectedRoute = "";
   bool _mapReady = false;
-
   int _currentIndex = 0;
 
+  // Temporizador para actualizar la ubicación del combi
+  Timer? _timer;
+
+  // Variable para el tipo de mapa: normal o híbrido
+  MapType _currentMapType = MapType.normal;
+
+  // Ubicación inicial centrada en Abancay, Apurímac
   final CameraPosition _initialCameraPosition = CameraPosition(
-    target: LatLng(-13.6368, -72.8822), // Ubicación centrada en Abancay, Apurímac
+    target: LatLng(-13.6368, -72.8822),
     zoom: 14,
   );
 
   @override
   void initState() {
     super.initState();
-    combisFuture = ServiceClient().combi();
+    combisFuture = ServiceClient().combis();
     _loadRoutes();
+
+    // Actualiza la ubicación del combi cada 1 segundo.
+    _timer = Timer.periodic(Duration(seconds: 1), (_) => _updateCombiLocation());
   }
 
-  /// Carga las rutas desde la API y almacena los puntos de cada línea
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  /// Carga las rutas desde la API y almacena los puntos de cada línea.
+  /// Se asume que en los datos, 'ejeX' es la latitud y 'ejeY' la longitud.
   Future<void> _loadRoutes() async {
     final combis = await combisFuture;
     final Map<String, List<LatLng>> loadedRoutes = {};
@@ -48,12 +69,11 @@ class _MapPageClienteState extends State<MapPageCliente> {
       }
 
       for (var ruta in rutas) {
-        // Conversión segura de coordenadas con manejo de errores
-        final double? ejeX = double.tryParse(ruta['ejeX'].replaceAll(',', '.')); // Longitud
-        final double? ejeY = double.tryParse(ruta['ejeY'].replaceAll(',', '.')); // Latitud
+        final double? lat = double.tryParse(ruta['ejeX'].replaceAll(',', '.'));
+        final double? lng = double.tryParse(ruta['ejeY'].replaceAll(',', '.'));
 
-        if (ejeX != null && ejeY != null) {
-          loadedRoutes[linea]!.add(LatLng(ejeY, ejeX)); // Formato correcto LAT, LNG
+        if (lat != null && lng != null) {
+          loadedRoutes[linea]!.add(LatLng(lat, lng)); // (lat, lng)
         } else {
           print("Error en coordenadas: ${ruta['ejeX']} , ${ruta['ejeY']}");
         }
@@ -62,11 +82,11 @@ class _MapPageClienteState extends State<MapPageCliente> {
 
     setState(() {
       routePaths = loadedRoutes;
-      combisData = combis; // Guardar datos en memoria para evitar recargas
+      combisData = combis; // Se guardan los datos para usarlos en la pestaña "Movil"
     });
   }
 
-  /// Inicializa el mapa cuando se crea
+  /// Callback que se ejecuta cuando se crea el mapa.
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
     setState(() {
@@ -74,38 +94,7 @@ class _MapPageClienteState extends State<MapPageCliente> {
     });
   }
 
-  /// Selecciona una ruta y la muestra en el mapa
-  void _selectRoute(String route) {
-    if (!routePaths.containsKey(route)) return;
-
-    final List<LatLng> routePoints = routePaths[route] ?? [];
-
-    if (routePoints.isNotEmpty) {
-      setState(() {
-        _selectedRoute = route;
-        _polylines.clear();
-        _polylines.add(
-          Polyline(
-            polylineId: PolylineId(route),
-            points: routePoints,
-            color: Colors.blue,
-            width: 5,
-          ),
-        );
-      });
-
-      if (_mapController != null) {
-        _mapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(
-            _calculateLatLngBounds(routePoints),
-            100,
-          ),
-        );
-      }
-    }
-  }
-
-  /// Calcula los límites de la ruta seleccionada para centrar la cámara en ella
+  /// Calcula los límites (bounds) de una lista de puntos para centrar la cámara.
   LatLngBounds _calculateLatLngBounds(List<LatLng> points) {
     double minLat = points.first.latitude;
     double maxLat = points.first.latitude;
@@ -125,10 +114,133 @@ class _MapPageClienteState extends State<MapPageCliente> {
     );
   }
 
-  /// Controla el cambio entre las pestañas inferiores
+  /// Dibuja la ruta seleccionada, coloca marcadores de inicio, intermedio y fin,
+  /// y centra la cámara para mostrarla completa.
+  void _selectRoute(String route) {
+    if (!routePaths.containsKey(route)) return;
+
+    final List<LatLng> routePoints = routePaths[route] ?? [];
+
+    if (routePoints.isNotEmpty) {
+      setState(() {
+        _selectedRoute = route;
+        _polylines.clear();
+        _polylines.add(
+          Polyline(
+            polylineId: PolylineId(route),
+            points: routePoints,
+            color: Colors.blue,
+            width: 5,
+          ),
+        );
+
+        // Se eliminan marcadores anteriores de ruta
+        _markers
+            .removeWhere((m) => m.markerId.value == 'start' || m.markerId.value == 'mid' || m.markerId.value == 'end');
+
+        final start = routePoints.first;
+        final end = routePoints.last;
+        final mid = routePoints[(routePoints.length / 2).floor()];
+
+        _markers.add(Marker(
+          markerId: MarkerId('start'),
+          position: start,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: InfoWindow(title: "Inicio"),
+        ));
+
+        _markers.add(Marker(
+          markerId: MarkerId('mid'),
+          position: mid,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          infoWindow: InfoWindow(title: "Intermedio"),
+        ));
+
+        _markers.add(Marker(
+          markerId: MarkerId('end'),
+          position: end,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: InfoWindow(title: "Fin"),
+        ));
+      });
+
+      // Centra la cámara en la ruta
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_mapController != null) {
+          _mapController!.animateCamera(
+            CameraUpdate.newLatLngBounds(
+              _calculateLatLngBounds(routePoints),
+              50,
+            ),
+          );
+        }
+      });
+    }
+  }
+
+  /// Actualiza la ubicación del combi usando los datos del array "ubicaciones".
+  /// Se toma la última ubicación disponible y se añade a la trayectoria.
+  Future<void> _updateCombiLocation() async {
+    try {
+      final combis = await ServiceClient().combis();
+      if (combis.isNotEmpty) {
+        // Buscamos el primer combi que tenga datos en "ubicaciones"
+        var combi = combis.firstWhere(
+          (c) => c['ubicaciones'] != null && c['ubicaciones'].isNotEmpty,
+          orElse: () => null,
+        );
+
+        if (combi != null) {
+          List<dynamic> ubicaciones = combi['ubicaciones'];
+          final lastUbicacion = ubicaciones.last;
+          final double? lat = double.tryParse(lastUbicacion['ejeX'].replaceAll(',', '.'));
+          final double? lng = double.tryParse(lastUbicacion['ejeY'].replaceAll(',', '.'));
+
+          if (lat != null && lng != null) {
+            final newPosition = LatLng(lat, lng);
+            setState(() {
+              // Removemos la ubicación anterior de la combi (si existe)
+              _markers.removeWhere((m) => m.markerId.value == 'combi');
+
+              // Agregamos (o actualizamos) el marcador de la combi
+              _markers.add(Marker(
+                markerId: MarkerId('combi'),
+                position: newPosition,
+                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+                infoWindow: InfoWindow(title: "Combi", snippet: "Ubicación actual"),
+              ));
+
+              // Agregamos el nuevo punto a la trayectoria y actualizamos el polyline
+              combiPath.add(newPosition);
+              _polylines.removeWhere((polyline) => polyline.polylineId.value == 'combi_path');
+              _polylines.add(
+                Polyline(
+                  polylineId: PolylineId('combi_path'),
+                  points: combiPath,
+                  color: Colors.green.withOpacity(0.5),
+                  width: 4,
+                ),
+              );
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print("Error actualizando ubicación: $e");
+    }
+  }
+
+  /// Cambia entre las pestañas inferiores.
   void _onTabTapped(int index) {
     setState(() {
       _currentIndex = index;
+    });
+  }
+
+  /// Cambia el tipo de mapa (normal o híbrido).
+  void _onMapTypeChanged(MapType selectedType) {
+    setState(() {
+      _currentMapType = selectedType;
     });
   }
 
@@ -138,7 +250,7 @@ class _MapPageClienteState extends State<MapPageCliente> {
       future: combisFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
+          return Scaffold(body: Center(child: CircularProgressIndicator()));
         } else if (snapshot.hasError) {
           return Scaffold(
             appBar: AppBar(title: Text('Error')),
@@ -147,33 +259,38 @@ class _MapPageClienteState extends State<MapPageCliente> {
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Scaffold(
             appBar: AppBar(title: Text('Sin datos')),
-            body: Center(child: Text('No se encontraron rutas disponibles.')),
+            body: Center(child: Text('No se encontraron datos disponibles.')),
           );
         }
 
-        List<Widget> _screens = [
-          Scaffold(
-            appBar: AppBar(title: Text('Mapa')),
-            body: GoogleMap(
-              onMapCreated: _onMapCreated,
-              initialCameraPosition: _initialCameraPosition,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: true,
-              polylines: _polylines,
-              markers: _markers,
-            ),
-          ),
-          Scaffold(
-            appBar: AppBar(title: Text('Ruta')),
-            body: Column(
-              children: [
-                DropdownButton<String>(
+        // Se utiliza una única instancia del widget GoogleMap.
+        Widget mapWidget = GoogleMap(
+          onMapCreated: _onMapCreated,
+          initialCameraPosition: _initialCameraPosition,
+          myLocationEnabled: true,
+          myLocationButtonEnabled: true,
+          polylines: _polylines,
+          markers: _markers,
+          mapType: _currentMapType,
+        );
+
+        Widget bodyContent;
+        if (_currentIndex == 0) {
+          // Pestaña "Mapa": muestra el mapa
+          bodyContent = mapWidget;
+        } else if (_currentIndex == 1) {
+          // Pestaña "Ruta": muestra un Dropdown para seleccionar la ruta y el mapa debajo.
+          bodyContent = Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: DropdownButton<String>(
                   hint: Text("Selecciona una línea"),
                   value: _selectedRoute.isEmpty ? null : _selectedRoute,
                   items: routePaths.keys
-                      .map((line) => DropdownMenuItem(
-                            child: Text(line),
+                      .map((line) => DropdownMenuItem<String>(
                             value: line,
+                            child: Text(line),
                           ))
                       .toList(),
                   onChanged: (value) {
@@ -182,56 +299,76 @@ class _MapPageClienteState extends State<MapPageCliente> {
                     }
                   },
                 ),
-                Expanded(
-                  child: _mapReady
-                      ? GoogleMap(
-                          onMapCreated: _onMapCreated,
-                          initialCameraPosition: _initialCameraPosition,
-                          myLocationEnabled: true,
-                          myLocationButtonEnabled: false,
-                          polylines: _polylines,
-                          markers: _markers,
-                        )
-                      : Center(child: CircularProgressIndicator()),
-                ),
-              ],
-            ),
-          ),
-          Scaffold(
-            appBar: AppBar(title: Text('Movil')),
-            body: Column(
-              children: [
-                Card(
+              ),
+              Expanded(child: mapWidget),
+            ],
+          );
+        } else {
+          // Pestaña "Movil": muestra los datos del combi según la línea seleccionada.
+          List<dynamic> filteredCombis = [];
+          if (_selectedRoute.isNotEmpty) {
+            // Se asume que _selectedRoute tiene el formato "Línea X"
+            final String selectedLine = _selectedRoute.split(" ").last;
+            filteredCombis = combisData.where((combi) => combi['linea'] == selectedLine).toList();
+          }
+
+          if (filteredCombis.isEmpty) {
+            bodyContent = Center(child: Text("Seleccione una línea para ver los datos del móvil."));
+          } else {
+            bodyContent = ListView.builder(
+              itemCount: filteredCombis.length,
+              itemBuilder: (context, index) {
+                final combi = filteredCombis[index];
+                final chofer = combi['chofer'];
+                final horario = combi['horario'];
+                return Card(
+                  margin: EdgeInsets.all(8.0),
                   child: ListTile(
-                    leading: Icon(Icons.person),
-                    title: Text("Chofer: Carlos González"),
+                    title: Text("Línea: ${combi['linea']} - Placa: ${combi['placa']}"),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Chofer: ${chofer['nombre']} ${chofer['apellidos']}"),
+                        Text("Modelo: ${combi['modelo']}"),
+                        Text("Horario: ${horario['horaPartida']} - ${horario['horaLlegada']}"),
+                        Text("Tiempo de llegada: ${horario['tiempoLlegada']}"),
+                        if (combi['ubicaciones'] != null && combi['ubicaciones'].isNotEmpty)
+                          Text("Última ubicación: ${combi['ubicaciones'].last['nombreLugar']}"),
+                      ],
+                    ),
                   ),
-                ),
-                Card(
-                  child: ListTile(
-                    leading: Icon(Icons.directions_car),
-                    title: Text("Placa: XYZ-789"),
-                  ),
-                ),
-                Card(
-                  child: ListTile(
-                    leading: Icon(Icons.access_time),
-                    title: Text("Horario: 09:00 AM - 09:45 AM"),
-                  ),
-                ),
-                Card(
-                  child: ListTile(
-                    leading: Icon(Icons.timer),
-                    title: Text("Tiempo de llegada: 45 minutos"),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ];
+                );
+              },
+            );
+          }
+        }
 
         return Scaffold(
-          body: _screens[_currentIndex],
+          appBar: AppBar(
+            title: Text("Mapa Cliente"),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.change_circle),
+                tooltip: 'Cambiar rol',
+                onPressed: () => Preferences.changeRole(context, 'conductor'),
+              ),
+              PopupMenuButton<MapType>(
+                onSelected: _onMapTypeChanged,
+                icon: Icon(Icons.layers),
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<MapType>>[
+                  PopupMenuItem<MapType>(
+                    value: MapType.normal,
+                    child: Text("Normal"),
+                  ),
+                  PopupMenuItem<MapType>(
+                    value: MapType.hybrid,
+                    child: Text("Híbrido"),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          body: bodyContent,
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex,
             onTap: _onTabTapped,

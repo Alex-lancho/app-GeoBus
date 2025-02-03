@@ -3,7 +3,10 @@ import 'package:app_ruta/chofer/screens/home.dart';
 import 'package:app_ruta/chofer/screens/registro.dart';
 import 'package:app_ruta/data/models/usuario.dart';
 import 'package:app_ruta/data/providers/service_login.dart';
+import 'package:app_ruta/services/preferences.dart';
+import 'package:app_ruta/widgets/home_geo_bus.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatelessWidget {
   final TextEditingController userController = TextEditingController();
@@ -54,6 +57,13 @@ class LoginPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Inicio de Sesión'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.change_circle),
+            tooltip: 'Cambiar rol',
+            onPressed: () => Preferences.changeRole(context, 'conductor'),
+          )
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

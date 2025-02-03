@@ -1,17 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-class ServiceRuta {
+class ServiceUbicacion {
   String url = 'http://192.168.3.13:3000';
 
-  Future<Map<String, dynamic>> createRuta({
+  Future<Map<String, dynamic>> createLocation({
     required double ejeX,
     required double ejeY,
     required String nombreLugar,
-    required String paradero,
+    required String tiempoTranscurrido,
     required String idCombi,
   }) async {
-    final uri = Uri.parse('$url/ruta/createRuta');
+    final uri = Uri.parse('$url/ubicacion/createUbicacion/');
     final headers = {'Content-Type': 'application/json'};
 
     final body = {
@@ -19,7 +19,7 @@ class ServiceRuta {
         "ejeX": ejeX,
         "ejeY": ejeY,
         "nombreLugar": nombreLugar,
-        "paradero": paradero,
+        "tiempoTranscurrido": tiempoTranscurrido,
       },
       "idCombi": idCombi,
     };
@@ -48,16 +48,16 @@ class ServiceRuta {
     required double ejeX,
     required double ejeY,
     required String nombreLugar,
-    required String paradero,
+    required String tiempoTranscurrido,
   }) async {
-    final uri = Uri.parse('$url/ruta/$idRuta');
+    final uri = Uri.parse('$url/ubicacion/$idRuta');
     final headers = {'Content-Type': 'application/json'};
 
     final body = {
       "ejeX": ejeX,
       "ejeY": ejeY,
       "nombreLugar": nombreLugar,
-      "paradero": paradero,
+      "tiempoTranscurrido": tiempoTranscurrido,
     };
 
     try {
@@ -79,8 +79,8 @@ class ServiceRuta {
   }
 
   /// **Elimina un punto de la ruta**
-  Future<void> deleteRuta(String idRuta) async {
-    final uri = Uri.parse('$url/ruta/$idRuta');
+  Future<void> deleteRuta(String idUbicacion) async {
+    final uri = Uri.parse('$url/ubicacion/$idUbicacion');
 
     try {
       final response = await http.delete(uri);
@@ -94,7 +94,7 @@ class ServiceRuta {
   }
 
   Future<List<Map<String, dynamic>>> getRutaById(String idCombi) async {
-    final uri = Uri.parse('$url/ruta/$idCombi');
+    final uri = Uri.parse('$url/ubicacion/obtenerUbicacionPorCombi/$idCombi');
 
     try {
       final response = await http.get(uri);

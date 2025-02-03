@@ -1,5 +1,5 @@
 import 'package:app_ruta/data/models/usuario.dart';
-import 'package:app_ruta/main.dart';
+import 'package:app_ruta/widgets/home_geo_bus.dart';
 import 'package:flutter/material.dart';
 
 class AdminDashboardPage extends StatelessWidget {
@@ -15,7 +15,7 @@ class AdminDashboardPage extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => GeoBusHomePage(),
+                builder: (context) => GeoBusHome(),
               ),
             );
           },
