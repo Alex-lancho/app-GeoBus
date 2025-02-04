@@ -1,8 +1,9 @@
 import 'dart:convert';
+import 'package:app_ruta/services/api_service.dart';
 import 'package:http/http.dart' as http;
 
 class ServiceUbicacion {
-  String url = 'http://192.168.3.13:3000';
+  String url = ApiService.url;
 
   Future<Map<String, dynamic>> createLocation({
     required double ejeX,

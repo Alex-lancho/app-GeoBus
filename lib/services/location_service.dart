@@ -1,4 +1,5 @@
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class LocationService {
   // Verifica permisos antes de obtener la ubicación en tiempo real
@@ -40,4 +41,42 @@ class LocationService {
       ),
     );
   }
+
+  // Realizando mapeo de puntos y marcadores
+  /*(List<LatLng>, Set<Marker>) procesarRutas(List<Map<String, dynamic>> rutas, BitmapDescriptor iconoStart,BitmapDescriptor iconWhereaboutsRoute, BitmapDescriptor ) {
+    final List<LatLng> points = [];
+    final Set<Marker> newMarkers = {};
+
+    for (int i = 0; i < rutas.length; i++) {
+      final lat = double.tryParse(rutas[i]["ejeX"] ?? '');
+      final lng = double.tryParse(rutas[i]["ejeY"] ?? '');
+
+      if (lat == null || lng == null) {
+        print('Error en coordenadas: ${rutas[i]}');
+        continue;
+      }
+
+      final position = LatLng(lat, lng);
+      points.add(position);
+
+      final icon = (i == 0)
+          ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
+          : (i == rutas.length - 1)
+              ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed)
+              : (rutas[i]["paradero"] == "paradero"
+                  ? _iconWhereaboutsRoute ?? BitmapDescriptor.defaultMarker
+                  : _iconNameRoute ?? BitmapDescriptor.defaultMarker);
+
+      newMarkers.add(
+        Marker(
+          markerId: MarkerId(rutas[i]["idRuta"].toString()),
+          position: position,
+          infoWindow: InfoWindow(title: rutas[i]["nombreLugar"] ?? "Sin nombre"),
+          icon: icon,
+        ),
+      );
+    }
+
+    return (points, newMarkers);
+  }*/
 }

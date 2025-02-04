@@ -1,5 +1,7 @@
 import 'package:app_ruta/chofer/data/providers/service_ubicacion.dart';
 import 'package:app_ruta/chofer/screens/add_route.dart';
+import 'package:app_ruta/chofer/screens/notificacions_page.dart';
+import 'package:app_ruta/services/ajust_camera_map.dart';
 import 'package:app_ruta/services/icon_service.dart';
 import 'package:app_ruta/services/location_service.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +13,7 @@ import 'package:app_ruta/chofer/data/providers/service_ruta.dart';
 class MapPageConductor extends StatefulWidget {
   final Usuario usuario;
 
-  MapPageConductor({required this.usuario});
+  const MapPageConductor({super.key, required this.usuario});
 
   @override
   _MapPageConductorState createState() => _MapPageConductorState();
@@ -21,17 +23,20 @@ class _MapPageConductorState extends State<MapPageConductor> {
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
   List<LatLng> _routePoints = [];
-  LatLng _initialPosition = LatLng(0, 0);
+  LatLng _initialPosition = const LatLng(0, 0);
   bool _hasRoute = false;
   BitmapDescriptor? _iconNameRoute;
   BitmapDescriptor? _iconWhereaboutsRoute;
   BitmapDescriptor? _iconBusRealTime;
   Marker? _locationMarker;
   LatLng? _lastSavedPosition; // Última posición guardada
-  final double minDistance = 5.0; // Distancia mínima en metros
-  final double minSpeed = 0.5; // Velocidad mínima en m/s para considerar movimiento
+  final double minDistance = 0.1; // Distancia mínima en metros
+  final double minSpeed = 0.1; // Velocidad mínima en m/s para considerar movimiento
   DateTime? _lastSavedTime; // Última vez que se guardó una ubicación
-  final Duration minTimeBetweenSaves = Duration(seconds: 10); // Tiempo mínimo entre registros
+  final Duration minTimeBetweenSaves = const Duration(seconds: 10);
+
+  // Variable para el tipo de mapa, inicializado en híbrido
+  MapType _currentMapType = MapType.hybrid;
 
   @override
   void initState() {
@@ -39,34 +44,30 @@ class _MapPageConductorState extends State<MapPageConductor> {
     _loadCustomMarkers();
   }
 
-  /// **Carga los iconos personalizados y obtiene la ruta antes de activar la ubicación en tiempo real**
+  /// Carga los iconos personalizados y obtiene la ruta antes de activar la ubicación en tiempo real.
   void _loadCustomMarkers() async {
     _iconNameRoute = await IconService().createCustomIcon(
       const Color.fromARGB(255, 8, 33, 106),
       Icons.circle,
       20.0,
     );
-
     _iconWhereaboutsRoute = await IconService().createCustomIcon(
       const Color.fromARGB(255, 2, 67, 9),
       Icons.directions_transit,
       30.0,
     );
-
     _iconBusRealTime = await IconService().createCustomIconCanva(
       const Color.fromARGB(255, 9, 61, 233),
       Icons.directions_bus,
       120.0,
     );
 
-    await _fetchRoutePoints(); //Primero muestra la ruta en el mapa
-
-    await Future.delayed(Duration(seconds: 5)); //Espera 5 segundos antes de activar la ubicación en tiempo real
-
-    _listenToLocation(); // Luego activa la ubicación en tiempo real
+    await _fetchRoutePoints(); // Primero muestra la ruta en el mapa
+    await Future.delayed(const Duration(seconds: 5)); // Espera 5 segundos antes de activar la ubicación en tiempo real
+    _listenToLocation(); // Activa la ubicación en tiempo real
   }
 
-  /// **Escucha la ubicación en tiempo real y actualiza el marcador en el mapa**
+  /// Escucha la ubicación en tiempo real y actualiza el marcador en el mapa.
   void _listenToLocation() async {
     bool hasPermission = await LocationService().checkPermissions();
     if (!hasPermission) {
@@ -99,13 +100,13 @@ class _MapPageConductorState extends State<MapPageConductor> {
         _markers.removeWhere((marker) => marker.markerId.value == "busLocation");
         _markers.add(_locationMarker!);
 
-        //Mover la cámara más cerca y con rotación
+        // Mover la cámara más cerca y con rotación
         _mapController?.animateCamera(CameraUpdate.newCameraPosition(
           CameraPosition(
             target: newPosition,
-            zoom: 18.5, //Zoom más cercano
-            tilt: 30, //Inclinación de la cámara para vista 3D
-            bearing: heading, //Gira la cámara en la dirección del movimiento
+            zoom: 18.5, // Zoom más cercano
+            tilt: 30, // Inclinación de la cámara para vista 3D
+            bearing: heading, // Gira la cámara en la dirección del movimiento
           ),
         ));
       });
@@ -113,7 +114,12 @@ class _MapPageConductorState extends State<MapPageConductor> {
   }
 
   Future<void> _saveNewLocation(
-      LatLng position, double speed, String nombreLugar, bool esParadero, String tiempoTranscurrido) async {
+    LatLng position,
+    double speed,
+    String nombreLugar,
+    bool esParadero,
+    String tiempoTranscurrido,
+  ) async {
     DateTime now = DateTime.now();
 
     // Verificar si ha pasado suficiente tiempo desde la última vez que se guardó una ubicación
@@ -128,7 +134,7 @@ class _MapPageConductorState extends State<MapPageConductor> {
       return;
     }
 
-    //Verificar si la distancia es suficiente para considerar un nuevo punto
+    // Verificar si la distancia es suficiente para considerar un nuevo punto
     if (_lastSavedPosition != null) {
       double distance = Geolocator.distanceBetween(
         _lastSavedPosition!.latitude,
@@ -162,7 +168,7 @@ class _MapPageConductorState extends State<MapPageConductor> {
     }
   }
 
-  /// **Obtiene los puntos de la ruta desde la API**
+  /// Obtiene los puntos de la ruta desde la API.
   Future<void> _fetchRoutePoints() async {
     try {
       final rutas = await ServiceRuta().getRutaById(widget.usuario.idCombi);
@@ -170,26 +176,23 @@ class _MapPageConductorState extends State<MapPageConductor> {
       if (rutas.isNotEmpty) {
         rutas.sort((a, b) => (a["idRuta"] as int).compareTo(b["idRuta"] as int));
 
-        List<LatLng> points = [];
-        Set<Marker> newMarkers = {};
+        final points = <LatLng>[];
+        final newMarkers = <Marker>{};
 
-        //recorre cada objeto de punto con sus respectivos atributos
         for (int i = 0; i < rutas.length; i++) {
-          //convierte a double los datos obtenidos de x y y
-          double? lat = double.tryParse(rutas[i]["ejeX"] ?? '');
-          double? lng = double.tryParse(rutas[i]["ejeY"] ?? '');
+          final lat = double.tryParse(rutas[i]["ejeX"] ?? '');
+          final lng = double.tryParse(rutas[i]["ejeY"] ?? '');
 
           if (lat == null || lng == null) {
             print('Error en coordenadas: ${rutas[i]}');
             continue;
           }
 
-          //obtines la posicion y lo agrega al points
-          LatLng position = LatLng(lat, lng);
+          final position = LatLng(lat, lng);
           points.add(position);
 
-          //crea un icono para un punto
-          BitmapDescriptor icon = (i == 0)
+          // Selección de icono según la posición y si es paradero.
+          final icon = (i == 0)
               ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
               : (i == rutas.length - 1)
                   ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed)
@@ -197,7 +200,6 @@ class _MapPageConductorState extends State<MapPageConductor> {
                       ? _iconWhereaboutsRoute ?? BitmapDescriptor.defaultMarker
                       : _iconNameRoute ?? BitmapDescriptor.defaultMarker);
 
-          //agrega un markador(punto de ubicacion) a newMarkers
           newMarkers.add(
             Marker(
               markerId: MarkerId(rutas[i]["idRuta"].toString()),
@@ -207,25 +209,25 @@ class _MapPageConductorState extends State<MapPageConductor> {
               ),
               icon: icon,
               onTap: () {
-                //cuando se toca el punto realiza una accion
+                // Acción al tocar el punto (puedes agregar funcionalidad adicional aquí)
               },
             ),
           );
         }
 
-        //actualiza los estados
         setState(() {
           _routePoints = points;
           _markers.clear();
           _markers.addAll(newMarkers);
           _hasRoute = _routePoints.isNotEmpty;
-          if (_routePoints.isNotEmpty) _initialPosition = _routePoints.first;
+          if (_routePoints.isNotEmpty) {
+            _initialPosition = _routePoints.first;
+          }
         });
 
-        //animacion de la camara de enfoque
+        // Anima la cámara para ajustar la vista a la ruta.
         if (_mapController != null && _routePoints.isNotEmpty) {
-          await Future.delayed(Duration(milliseconds: 500));
-
+          await Future.delayed(const Duration(milliseconds: 500));
           _mapController!.animateCamera(
             CameraUpdate.newLatLngBounds(_calculateBounds(_routePoints), 50),
           );
@@ -236,7 +238,7 @@ class _MapPageConductorState extends State<MapPageConductor> {
     }
   }
 
-  /// **Configura el mapa cuando se crea**
+  /// Configura el mapa cuando se crea.
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
     if (_routePoints.isNotEmpty) {
@@ -246,21 +248,23 @@ class _MapPageConductorState extends State<MapPageConductor> {
     }
   }
 
-  /// **Calcula los límites de la ruta para ajustar la cámara**
+  /// Calcula los límites de la ruta para ajustar la cámara.
   LatLngBounds _calculateBounds(List<LatLng> points) {
-    double south = points.first.latitude, north = points.first.latitude;
-    double west = points.first.longitude, east = points.first.longitude;
+    return AjustCameraMap.calculateBounds(points);
+  }
 
-    for (LatLng point in points) {
-      if (point.latitude < south) south = point.latitude;
-      if (point.latitude > north) north = point.latitude;
-      if (point.longitude < west) west = point.longitude;
-      if (point.longitude > east) east = point.longitude;
-    }
+  /// Cambia el tipo de mapa entre normal e híbrido.
+  void _toggleMapType() {
+    setState(() {
+      _currentMapType = _currentMapType == MapType.hybrid ? MapType.normal : MapType.hybrid;
+    });
+  }
 
-    return LatLngBounds(
-      southwest: LatLng(south, west),
-      northeast: LatLng(north, east),
+  /// Navega a la página de notificaciones.
+  void _onNotificationsPressed() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const NotificationsPage()),
     );
   }
 
@@ -268,10 +272,31 @@ class _MapPageConductorState extends State<MapPageConductor> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.usuario.nombre} ${widget.usuario.apellidos}'),
+        title: Text(
+          '${widget.usuario.nombre} ${widget.usuario.apellidos}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        //backgroundColor: Colors.indigo,
+        elevation: 4.0,
         actions: [
           IconButton(
-            icon: Icon(_hasRoute ? Icons.edit_location_alt : Icons.add_location_alt_outlined),
+            icon: Icon(
+              _currentMapType == MapType.hybrid ? Icons.map : Icons.satellite,
+              color: const Color.fromARGB(255, 0, 0, 0),
+            ),
+            onPressed: _toggleMapType,
+            tooltip: 'Cambiar tipo de mapa',
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Color.fromARGB(255, 0, 0, 0)),
+            onPressed: _onNotificationsPressed,
+            tooltip: 'Notificaciones',
+          ),
+          IconButton(
+            icon: Icon(
+              _hasRoute ? Icons.edit_location_alt : Icons.add_location_alt_outlined,
+              color: const Color.fromARGB(255, 0, 0, 0),
+            ),
             onPressed: () async {
               final updatedRoute = await Navigator.push(
                 context,
@@ -279,11 +304,11 @@ class _MapPageConductorState extends State<MapPageConductor> {
                   builder: (context) => EditRoutePage(usuario: widget.usuario),
                 ),
               );
-
               if (updatedRoute != null && updatedRoute is List<LatLng>) {
                 await _fetchRoutePoints();
               }
             },
+            tooltip: _hasRoute ? 'Editar ruta' : 'Agregar ruta',
           ),
         ],
       ),
@@ -298,16 +323,16 @@ class _MapPageConductorState extends State<MapPageConductor> {
                 zoom: 16.0,
               ),
               myLocationEnabled: true,
-              mapType: MapType.hybrid,
+              mapType: _currentMapType,
               markers: _markers,
               polylines: {
                 Polyline(
-                  polylineId: PolylineId('mainRoute'),
+                  polylineId: const PolylineId('mainRoute'),
                   points: _routePoints,
                   color: Colors.blue.withOpacity(0.80),
                   width: 10,
-                  startCap: Cap.roundCap, // Puntas redondeadas
-                  endCap: Cap.roundCap, // Puntas redondeadas
+                  startCap: Cap.roundCap,
+                  endCap: Cap.roundCap,
                 ),
               },
             ),
@@ -315,17 +340,17 @@ class _MapPageConductorState extends State<MapPageConductor> {
           Expanded(
             flex: 1,
             child: Container(
-              padding: EdgeInsets.all(16.0),
+              width: double.infinity,
+              padding: const EdgeInsets.all(16.0),
+              margin: const EdgeInsets.only(top: 8.0),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20.0),
-                  topRight: Radius.circular(20.0),
-                ),
-                boxShadow: [
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24.0)),
+                boxShadow: const [
                   BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 5.0,
+                    color: Colors.black26,
+                    blurRadius: 10.0,
+                    offset: Offset(0, -2),
                   ),
                 ],
               ),
@@ -334,28 +359,51 @@ class _MapPageConductorState extends State<MapPageConductor> {
                 children: [
                   Text(
                     'Información de la Combi',
-                    style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 20.0,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.indigo.shade700,
+                    ),
                   ),
-                  SizedBox(height: 8.0),
+                  const SizedBox(height: 12.0),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Placa: ${widget.usuario.placa}'),
-                      Text('Modelo: ${widget.usuario.modelo}'),
+                      Text(
+                        'Placa: ${widget.usuario.placa}',
+                        style: const TextStyle(fontSize: 16.0),
+                      ),
+                      Text(
+                        'Modelo: ${widget.usuario.modelo}',
+                        style: const TextStyle(fontSize: 16.0),
+                      ),
                     ],
                   ),
-                  SizedBox(height: 16.0),
+                  const Divider(height: 24.0, thickness: 1.2),
                   Text(
                     'Horario de Ruta',
-                    style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 20.0,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.indigo.shade700,
+                    ),
                   ),
-                  SizedBox(height: 8.0),
+                  const SizedBox(height: 12.0),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Partida: ${widget.usuario.horaPartida}'),
-                      Text('Llegada: ${widget.usuario.horaLlegada}'),
-                      Text('Duración: ${widget.usuario.tiempoLlegada}'),
+                      Text(
+                        'Partida: ${widget.usuario.horaPartida}',
+                        style: const TextStyle(fontSize: 16.0),
+                      ),
+                      Text(
+                        'Llegada: ${widget.usuario.horaLlegada}',
+                        style: const TextStyle(fontSize: 16.0),
+                      ),
+                      Text(
+                        'Duración: ${widget.usuario.tiempoLlegada}',
+                        style: const TextStyle(fontSize: 16.0),
+                      ),
                     ],
                   ),
                 ],

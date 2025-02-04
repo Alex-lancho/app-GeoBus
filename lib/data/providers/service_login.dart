@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:app_ruta/chofer/screens/login_chofer.dart';
 import 'package:app_ruta/data/models/usuario.dart';
+import 'package:app_ruta/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class ServiceLogin {
-  String url = 'http://192.168.3.13:3000';
+  String url = ApiService.url;
 
   Future<Usuario?> login(String usuario, String contrasena) async {
     final url = Uri.parse('${this.url}/usuarios/login');
