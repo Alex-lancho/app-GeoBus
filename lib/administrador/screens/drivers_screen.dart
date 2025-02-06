@@ -44,8 +44,8 @@ class _DriversScreenState extends State<DriversScreen> {
 
     // Controladores para los campos
     final TextEditingController nombreController = TextEditingController(text: isEditing ? driver!.nombre : '');
-    final TextEditingController apellidosController = TextEditingController(text: isEditing ? driver!.apellidos : '');
-    final TextEditingController dniController = TextEditingController(text: isEditing ? driver!.dni : '');
+    final TextEditingController apellidosController = TextEditingController(text: isEditing ? driver.apellidos : '');
+    final TextEditingController dniController = TextEditingController(text: isEditing ? driver.dni : '');
 
     showDialog(
       context: context,
@@ -159,51 +159,53 @@ class _DriversScreenState extends State<DriversScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Choferes'),
-      ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : drivers.isEmpty
-              ? Center(child: Text('No hay choferes registrados.'))
-              : ListView.builder(
-                  itemCount: drivers.length,
-                  itemBuilder: (context, index) {
-                    final driver = drivers[index];
-                    return Card(
-                      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          child: Icon(Icons.person),
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        appBar: AppBar(
+          title: Text('Choferes'),
+        ),
+        body: isLoading
+            ? Center(child: CircularProgressIndicator())
+            : drivers.isEmpty
+                ? Center(child: Text('No hay choferes registrados.'))
+                : ListView.builder(
+                    itemCount: drivers.length,
+                    itemBuilder: (context, index) {
+                      final driver = drivers[index];
+                      return Card(
+                        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        title: Text('${driver.nombre} ${driver.apellidos}'),
-                        subtitle: Text('DNI: ${driver.dni}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () => _openDriverForm(driver),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteDriver(driver.idChofer),
-                            ),
-                          ],
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            child: Icon(Icons.person),
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                          ),
+                          title: Text('${driver.nombre} ${driver.apellidos}'),
+                          subtitle: Text('DNI: ${driver.dni}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () => _openDriverForm(driver),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteDriver(driver.idChofer),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openDriverForm(),
-        child: Icon(Icons.add),
-      ),
-    );
+                      );
+                    },
+                  ),
+        //
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        floatingActionButton: FloatingActionButton(
+          tooltip: 'Crear Nuevo Usuario',
+          onPressed: () => _openDriverForm(),
+          child: Icon(Icons.person_add),
+        ));
   }
 }

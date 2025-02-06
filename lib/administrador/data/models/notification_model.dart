@@ -2,15 +2,15 @@ class NotificationModel {
   final String idNotificacion;
   final String tipo;
   final String descripcion;
-  final String tipoUsuario;
-  final String macMovil;
+  final String nombreCompleto;
+  final String dni;
 
   NotificationModel({
     required this.idNotificacion,
     required this.tipo,
     required this.descripcion,
-    required this.tipoUsuario,
-    required this.macMovil,
+    required this.nombreCompleto,
+    required this.dni,
   });
 
   // Método para construir un objeto Notificacion a partir de un JSON
@@ -19,8 +19,8 @@ class NotificationModel {
       idNotificacion: json['idNotificacion'],
       tipo: json['tipo'] ?? '',
       descripcion: json['descripcion'] ?? '',
-      tipoUsuario: json['tipoUsuario'] ?? '',
-      macMovil: json['MacMovil'] ?? '',
+      nombreCompleto: json['tipoUsuario'] ?? '',
+      dni: json['MacMovil'] ?? '',
     );
   }
 
@@ -30,8 +30,8 @@ class NotificationModel {
       'idNotificacion': idNotificacion,
       'tipo': tipo,
       'descripcion': descripcion,
-      'tipoUsuario': tipoUsuario,
-      'MacMovil': macMovil,
+      'tipoUsuario': nombreCompleto,
+      'MacMovil': dni,
     };
   }
 }

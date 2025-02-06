@@ -77,7 +77,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Dashboard - ${adminInfo["nombre"] ?? "Administrador"}'),
+        title: Text('Administrador'),
         actions: [
           IconButton(
             icon: Icon(Icons.person),
@@ -105,7 +105,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       width: double.infinity,
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.indigo.shade700,
+        color: const Color.fromARGB(255, 15, 146, 211),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(32),
           bottomRight: Radius.circular(32),
@@ -232,12 +232,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           children: [
             _crudButton(context, "Choferes", Icons.person, _navegateADrivers),
             _crudButton(context, "Combis", Icons.directions_bus_filled, _navegateACombis),
-            _crudButton(context, "Rutas", Icons.map_outlined, _navegateARoutes),
-            _crudButton(context, "Horarios", Icons.schedule, _navegateAShedules),
-            _crudButton(context, "Ubicaciones", Icons.location_on, _navegateALocation),
             _crudButton(context, "Evaluaciones", Icons.star_border, _navegateAEvaluations),
             _crudButton(context, "Alertas", Icons.warning_amber, _navegateAAlerts),
             _crudButton(context, "Notificaciones", Icons.notifications_active, _navegateNotifications),
+            _crudButton(context, "Rutas", Icons.map_outlined, _navegateARoutes),
+            _crudButton(context, "Horarios", Icons.schedule, _navegateAShedules),
+            _crudButton(context, "Ubicaciones", Icons.location_on, _navegateALocation),
           ],
         ),
       ],
@@ -282,23 +282,62 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   void _navegateARoutes() {
-    Navigator.push(
+    /*Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => RoutesScreens()),
+    );*/
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Aun esta en desarrollo'), duration: const Duration(milliseconds: 1500),
+        width: 300.0, // Width of the SnackBar.
+        padding: const EdgeInsets.symmetric(
+          horizontal: 10.0,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+      ),
     );
   }
 
   void _navegateAShedules() {
-    Navigator.push(
+    /*Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => ShedulesScreens()),
+    );*/
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Aun esta en desarrollo'), duration: const Duration(milliseconds: 1500),
+        width: 300.0, // Width of the SnackBar.
+        padding: const EdgeInsets.symmetric(
+          horizontal: 10.0,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+      ),
     );
   }
 
   void _navegateALocation() {
-    Navigator.push(
+    /*Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => LocationsScreens()),
+    );*/
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Aun esta en desarrollo'), duration: const Duration(milliseconds: 1500),
+        width: 300.0, // Width of the SnackBar.
+        padding: const EdgeInsets.symmetric(
+          horizontal: 10.0,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+      ),
     );
   }
 
@@ -329,27 +368,77 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Datos del Usuario'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Usuario: ${usuario['usuario']}'),
-              Text('ID Chofer: ${usuario['idChofer']}'),
-              Text('Tipo: ${usuario['tipo']}'),
-              Text('Nombre: ${usuario['nombre']}'),
-              Text('Apellidos: ${usuario['apellidos']}'),
-              Text('DNI: ${usuario['dni']}'),
-            ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+          ),
+          backgroundColor: Colors.white,
+          title: Text(
+            'Datos del Usuario',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: Colors.indigo,
+            ),
+          ),
+          content: Container(
+            // Ajusta el ancho máximo si lo deseas
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoRow('Usuario', usuario['usuario']),
+                SizedBox(height: 8),
+                SizedBox(height: 8),
+                _buildInfoRow('Tipo', usuario['tipo']),
+                SizedBox(height: 8),
+                _buildInfoRow('Nombre', usuario['nombre']),
+                SizedBox(height: 8),
+                _buildInfoRow('Apellidos', usuario['apellidos']),
+                SizedBox(height: 8),
+                _buildInfoRow('DNI', usuario['dni']),
+              ],
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cerrar'),
+              child: Text(
+                'Cerrar',
+                style: TextStyle(
+                  color: Colors.indigo,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: Colors.black87,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black54,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
