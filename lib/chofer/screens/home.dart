@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:app_ruta/chofer/data/providers/service_ubicacion.dart';
 import 'package:app_ruta/chofer/screens/add_route.dart';
 import 'package:app_ruta/chofer/screens/notificacions_page.dart';
@@ -19,7 +20,7 @@ class MapPageConductor extends StatefulWidget {
   _MapPageConductorState createState() => _MapPageConductorState();
 }
 
-class _MapPageConductorState extends State<MapPageConductor> {
+class _MapPageConductorState extends State<MapPageConductor> with WidgetsBindingObserver {
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
   List<LatLng> _routePoints = [];
@@ -38,10 +39,45 @@ class _MapPageConductorState extends State<MapPageConductor> {
   // Variable para el tipo de mapa, inicializado en híbrido
   MapType _currentMapType = MapType.hybrid;
 
+  // Variable para almacenar la suscripción al stream de ubicación
+  StreamSubscription<Position>? _locationSubscription;
+
   @override
   void initState() {
     super.initState();
+    // Registro del observador del ciclo de vida
+    WidgetsBinding.instance.addObserver(this);
     _loadCustomMarkers();
+  }
+
+  @override
+  void dispose() {
+    // Cancelamos la suscripción al stream y eliminamos el observador para evitar fugas de memoria
+    _locationSubscription?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Maneja los cambios en el ciclo de vida de la aplicación.
+  /// En este ejemplo se mantiene activa la suscripción al stream para seguir recibiendo
+  /// actualizaciones incluso cuando la app se vuelve inactiva o entra en segundo plano.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    switch (state) {
+      case AppLifecycleState.resumed:
+        // Si la suscripción se perdió por algún motivo, se reactiva.
+        if (_locationSubscription == null) {
+          _listenToLocation();
+        }
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // No se realiza ninguna acción en estos estados para seguir funcionando en background.
+        break;
+    }
   }
 
   /// Carga los iconos personalizados y obtiene la ruta antes de activar la ubicación en tiempo real.
@@ -62,9 +98,11 @@ class _MapPageConductorState extends State<MapPageConductor> {
       120.0,
     );
 
-    await _fetchRoutePoints(); // Primero muestra la ruta en el mapa
-    await Future.delayed(const Duration(seconds: 5)); // Espera 5 segundos antes de activar la ubicación en tiempo real
-    _listenToLocation(); // Activa la ubicación en tiempo real
+    // Primero mostramos la ruta en el mapa.
+    await _fetchRoutePoints();
+    // Espera 5 segundos antes de activar la ubicación en tiempo real.
+    await Future.delayed(const Duration(seconds: 5));
+    _listenToLocation();
   }
 
   /// Escucha la ubicación en tiempo real y actualiza el marcador en el mapa.
@@ -72,7 +110,7 @@ class _MapPageConductorState extends State<MapPageConductor> {
     bool hasPermission = await LocationService().checkPermissions();
     if (!hasPermission) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text("Permisos de ubicación denegados"),
           duration: Duration(seconds: 1),
         ),
@@ -80,39 +118,48 @@ class _MapPageConductorState extends State<MapPageConductor> {
       return;
     }
 
-    LocationService().getLocationStream().listen((Position position) {
-      LatLng newPosition = LatLng(position.latitude, position.longitude);
-      double heading = position.heading;
-      double speed = position.speed; // Velocidad en m/s
+    // Inicia la suscripción al stream de ubicación.
+    _locationSubscription = LocationService().getLocationStream().listen(
+      (Position position) {
+        LatLng newPosition = LatLng(position.latitude, position.longitude);
+        double heading = position.heading;
+        double speed = position.speed; // Velocidad en m/s
 
-      print("Ubicación actual: Latitud ${position.latitude}, Longitud ${position.longitude}");
-      // Llamar a la función de guardado, pero solo si hay movimiento
-      _saveNewLocation(newPosition, speed, "Ubicación en movimiento", false, DateTime.now().toIso8601String());
-
-      setState(() {
-        _locationMarker = Marker(
-          markerId: MarkerId("busLocation"),
-          position: newPosition,
-          icon: _iconBusRealTime ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          infoWindow: InfoWindow(title: "Ubicación del Bus"),
+        // Guardamos la nueva ubicación solo si hay movimiento (según las validaciones).
+        _saveNewLocation(
+          newPosition,
+          speed,
+          "Ubicación en movimiento",
+          false,
+          DateTime.now().toIso8601String(),
         );
 
-        _markers.removeWhere((marker) => marker.markerId.value == "busLocation");
-        _markers.add(_locationMarker!);
+        setState(() {
+          _locationMarker = Marker(
+            markerId: const MarkerId("busLocation"),
+            position: newPosition,
+            icon: _iconBusRealTime ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            infoWindow: const InfoWindow(title: "Ubicación del Bus"),
+          );
 
-        // Mover la cámara más cerca y con rotación
-        _mapController?.animateCamera(CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: newPosition,
-            zoom: 18.5, // Zoom más cercano
-            tilt: 30, // Inclinación de la cámara para vista 3D
-            bearing: heading, // Gira la cámara en la dirección del movimiento
-          ),
-        ));
-      });
-    });
+          _markers.removeWhere((marker) => marker.markerId.value == "busLocation");
+          _markers.add(_locationMarker!);
+
+          // Mover la cámara con rotación e inclinación para vista 3D.
+          _mapController?.animateCamera(CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: newPosition,
+              zoom: 18.5,
+              tilt: 30,
+              bearing: heading,
+            ),
+          ));
+        });
+      },
+    );
   }
 
+  /// Guarda la nueva ubicación, validando tiempo, velocidad y distancia mínima.
   Future<void> _saveNewLocation(
     LatLng position,
     double speed,
@@ -122,19 +169,17 @@ class _MapPageConductorState extends State<MapPageConductor> {
   ) async {
     DateTime now = DateTime.now();
 
-    // Verificar si ha pasado suficiente tiempo desde la última vez que se guardó una ubicación
+    // Validar que haya pasado el tiempo mínimo desde la última guardada.
     if (_lastSavedTime != null && now.difference(_lastSavedTime!) < minTimeBetweenSaves) {
-      print("No se guarda ubicación: tiempo mínimo no cumplido.");
       return;
     }
 
-    // Verificar si la velocidad es suficiente para considerar movimiento
+    // Validar que la velocidad sea suficiente para considerar movimiento.
     if (speed < minSpeed) {
-      print("No se guarda ubicación: velocidad muy baja (${speed} m/s).");
       return;
     }
 
-    // Verificar si la distancia es suficiente para considerar un nuevo punto
+    // Validar que la distancia sea suficiente para registrar un nuevo punto.
     if (_lastSavedPosition != null) {
       double distance = Geolocator.distanceBetween(
         _lastSavedPosition!.latitude,
@@ -144,7 +189,6 @@ class _MapPageConductorState extends State<MapPageConductor> {
       );
 
       if (distance < minDistance) {
-        print("No se guarda ubicación: distancia mínima (${distance} m) no cumplida.");
         return;
       }
     }
@@ -158,22 +202,21 @@ class _MapPageConductorState extends State<MapPageConductor> {
         idCombi: widget.usuario.idCombi,
       );
 
-      // Actualizar valores
+      // Actualizar la última posición y el tiempo de guardado.
       _lastSavedPosition = position;
       _lastSavedTime = now;
-
-      print("Ubicación guardada: Lat ${position.latitude}, Lon ${position.longitude}, Velocidad: ${speed} m/s.");
     } catch (e) {
-      print("Error al agregar punto: $e");
+      // Aquí se podría manejar el error según se requiera.
     }
   }
 
-  /// Obtiene los puntos de la ruta desde la API.
+  /// Obtiene los puntos de la ruta desde la API y los muestra en el mapa.
   Future<void> _fetchRoutePoints() async {
     try {
       final rutas = await ServiceRuta().getRutaById(widget.usuario.idCombi);
 
       if (rutas.isNotEmpty) {
+        // Ordena las rutas por id.
         rutas.sort((a, b) => (a["idRuta"] as int).compareTo(b["idRuta"] as int));
 
         final points = <LatLng>[];
@@ -184,7 +227,6 @@ class _MapPageConductorState extends State<MapPageConductor> {
           final lng = double.tryParse(rutas[i]["ejeY"] ?? '');
 
           if (lat == null || lng == null) {
-            print('Error en coordenadas: ${rutas[i]}');
             continue;
           }
 
@@ -209,7 +251,7 @@ class _MapPageConductorState extends State<MapPageConductor> {
               ),
               icon: icon,
               onTap: () {
-                // Acción al tocar el punto (puedes agregar funcionalidad adicional aquí)
+                // Acción adicional al tocar el marcador, si se requiere.
               },
             ),
           );
@@ -225,7 +267,7 @@ class _MapPageConductorState extends State<MapPageConductor> {
           }
         });
 
-        // Anima la cámara para ajustar la vista a la ruta.
+        // Ajustar la cámara para mostrar toda la ruta.
         if (_mapController != null && _routePoints.isNotEmpty) {
           await Future.delayed(const Duration(milliseconds: 500));
           _mapController!.animateCamera(
@@ -234,7 +276,7 @@ class _MapPageConductorState extends State<MapPageConductor> {
         }
       }
     } catch (e) {
-      print('Error al obtener los puntos de ruta: $e');
+      // Manejo de error (opcional)
     }
   }
 
@@ -248,7 +290,7 @@ class _MapPageConductorState extends State<MapPageConductor> {
     }
   }
 
-  /// Calcula los límites de la ruta para ajustar la cámara.
+  /// Calcula los límites para ajustar la vista de la cámara a los puntos de la ruta.
   LatLngBounds _calculateBounds(List<LatLng> points) {
     return AjustCameraMap.calculateBounds(points);
   }
@@ -264,7 +306,9 @@ class _MapPageConductorState extends State<MapPageConductor> {
   void _onNotificationsPressed() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const NotificationsPage()),
+      MaterialPageRoute(
+        builder: (context) => NotificationsPage(idChofer: widget.usuario.idChofer),
+      ),
     );
   }
 
@@ -276,7 +320,6 @@ class _MapPageConductorState extends State<MapPageConductor> {
           '${widget.usuario.nombre} ${widget.usuario.apellidos}',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        //backgroundColor: Colors.indigo,
         elevation: 4.0,
         actions: [
           IconButton(
@@ -343,10 +386,10 @@ class _MapPageConductorState extends State<MapPageConductor> {
               width: double.infinity,
               padding: const EdgeInsets.all(16.0),
               margin: const EdgeInsets.only(top: 8.0),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24.0)),
-                boxShadow: const [
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
+                boxShadow: [
                   BoxShadow(
                     color: Colors.black26,
                     blurRadius: 10.0,

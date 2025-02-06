@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:app_ruta/data/providers/service_client.dart';
+import 'package:app_ruta/pasajeros/screens/bus_data.dart';
+import 'package:app_ruta/pasajeros/screens/map_client.dart';
+import 'package:app_ruta/pasajeros/screens/map_route.dart';
 import 'package:app_ruta/services/ajust_camera_map.dart';
 import 'package:app_ruta/services/icon_service.dart';
 import 'package:app_ruta/services/preferences.dart';
@@ -29,7 +32,7 @@ class _MapPageClienteState extends State<MapPageCliente> {
 
   // Valor seleccionado en el Dropdown (ej: "Línea 3").
   String _selectedRoute = "";
-  int _currentIndex = 0;
+  int _currentIndex = 1;
 
   // Temporizador para actualizar la ubicación del combi.
   Timer? _timer;
@@ -282,17 +285,15 @@ class _MapPageClienteState extends State<MapPageCliente> {
 
         // Creamos una lista de pestañas (cada una simulando su propio Scaffold).
         final List<Widget> tabs = [
-          MapTabWidget(
+          MapRute(
             title: "Mapa Cliente",
             mapType: _currentMapType,
             initialCameraPosition: _initialCameraPosition,
-            markers: _markers,
-            polylines: _polylines,
             onMapCreated: _onMapCreated,
             onMapTypeChanged: _onMapTypeChanged,
             onChangeRole: () => Preferences.changeRole(context, 'conductor'),
           ),
-          RouteTabWidget(
+          MapClient(
             title: "Ruta",
             mapType: _currentMapType,
             initialCameraPosition: _initialCameraPosition,
@@ -310,7 +311,7 @@ class _MapPageClienteState extends State<MapPageCliente> {
             onMapTypeChanged: _onMapTypeChanged,
             onChangeRole: () => Preferences.changeRole(context, 'conductor'),
           ),
-          MobileTabWidget(
+          BusData(
             title: "Datos del Móvil",
             combisData: combisData,
             selectedRoute: _selectedRoute,
@@ -319,256 +320,38 @@ class _MapPageClienteState extends State<MapPageCliente> {
 
         return Scaffold(
           body: tabs[_currentIndex],
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: _onTabTapped,
-            selectedItemColor: Colors.indigo,
-            unselectedItemColor: Colors.grey,
-            items: [
-              BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Mapa'),
-              BottomNavigationBarItem(icon: Icon(Icons.directions), label: 'Ruta'),
-              BottomNavigationBarItem(icon: Icon(Icons.directions_bus), label: 'Movil'),
+          bottomNavigationBar: NavigationBar(
+            onDestinationSelected: _onTabTapped,
+            selectedIndex: _currentIndex,
+            indicatorColor: const Color.fromARGB(227, 29, 146, 144),
+            backgroundColor: const Color.fromARGB(226, 255, 255, 255),
+            destinations: const <Widget>[
+              NavigationDestination(
+                selectedIcon: Icon(Icons.map, color: Color.fromARGB(255, 255, 255, 255)),
+                icon: Icon(Icons.map_outlined),
+                label: 'Mapa',
+              ),
+              NavigationDestination(
+                  selectedIcon: Icon(Icons.directions, color: Color.fromARGB(255, 255, 255, 255)),
+                  icon: Icon(
+                    Icons.directions_outlined,
+                  ),
+                  label: 'Ruta'),
+              NavigationDestination(
+                selectedIcon: Badge(
+                  label: Text("2"),
+                  child: Icon(Icons.directions_bus, color: Color.fromARGB(255, 255, 255, 255)),
+                ),
+                icon: Badge(
+                  label: Text("2"),
+                  child: Icon(Icons.directions_bus_outlined),
+                ),
+                label: 'Combi',
+              ),
             ],
           ),
         );
       },
-    );
-  }
-}
-
-/// Pestaña "Mapa" (simula un Scaffold propio).
-class MapTabWidget extends StatelessWidget {
-  final String title;
-  final MapType mapType;
-  final CameraPosition initialCameraPosition;
-  final Set<Marker> markers;
-  final Set<Polyline> polylines;
-  final Function(GoogleMapController) onMapCreated;
-  final Function(MapType) onMapTypeChanged;
-  final VoidCallback onChangeRole;
-
-  const MapTabWidget({
-    Key? key,
-    required this.title,
-    required this.mapType,
-    required this.initialCameraPosition,
-    required this.markers,
-    required this.polylines,
-    required this.onMapCreated,
-    required this.onMapTypeChanged,
-    required this.onChangeRole,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.indigo,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.change_circle),
-            tooltip: 'Cambiar rol',
-            onPressed: onChangeRole,
-          ),
-          PopupMenuButton<MapType>(
-            onSelected: onMapTypeChanged,
-            icon: Icon(Icons.layers),
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<MapType>>[
-              PopupMenuItem<MapType>(
-                value: MapType.normal,
-                child: Text("Normal"),
-              ),
-              PopupMenuItem<MapType>(
-                value: MapType.hybrid,
-                child: Text("Híbrido"),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: GoogleMap(
-        onMapCreated: onMapCreated,
-        initialCameraPosition: initialCameraPosition,
-        markers: markers,
-        polylines: polylines,
-        mapType: mapType,
-        myLocationEnabled: true,
-        myLocationButtonEnabled: true,
-      ),
-    );
-  }
-}
-
-/// Pestaña "Ruta" con Dropdown y mapa.
-class RouteTabWidget extends StatelessWidget {
-  final String title;
-  final MapType mapType;
-  final CameraPosition initialCameraPosition;
-  final Set<Marker> markers;
-  final Set<Polyline> polylines;
-  final Map<String, List<LatLng>> routePaths;
-  final String selectedRoute;
-  final Function(String) onRouteSelected;
-  final Function(GoogleMapController) onMapCreated;
-  final Function(MapType) onMapTypeChanged;
-  final VoidCallback onChangeRole;
-
-  const RouteTabWidget({
-    Key? key,
-    required this.title,
-    required this.mapType,
-    required this.initialCameraPosition,
-    required this.markers,
-    required this.polylines,
-    required this.routePaths,
-    required this.selectedRoute,
-    required this.onRouteSelected,
-    required this.onMapCreated,
-    required this.onMapTypeChanged,
-    required this.onChangeRole,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.indigo,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.change_circle),
-            tooltip: 'Cambiar rol',
-            onPressed: onChangeRole,
-          ),
-          PopupMenuButton<MapType>(
-            onSelected: onMapTypeChanged,
-            icon: Icon(Icons.layers),
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<MapType>>[
-              PopupMenuItem<MapType>(
-                value: MapType.normal,
-                child: Text("Normal"),
-              ),
-              PopupMenuItem<MapType>(
-                value: MapType.hybrid,
-                child: Text("Híbrido"),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Dropdown estilizado.
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 6.0,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: DropdownButton<String>(
-                isExpanded: true,
-                underline: Container(),
-                hint: Text("Selecciona una línea", style: TextStyle(fontSize: 16)),
-                value: selectedRoute.isEmpty ? null : selectedRoute,
-                items: routePaths.keys
-                    .map((line) => DropdownMenuItem<String>(
-                          value: line,
-                          child: Text(line, style: TextStyle(fontSize: 16)),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    onRouteSelected(value);
-                  }
-                },
-              ),
-            ),
-          ),
-          // Mapa.
-          Expanded(
-            child: GoogleMap(
-              onMapCreated: onMapCreated,
-              initialCameraPosition: initialCameraPosition,
-              markers: markers,
-              polylines: polylines,
-              mapType: mapType,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: true,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Pestaña "Movil" que muestra los datos filtrados.
-class MobileTabWidget extends StatelessWidget {
-  final String title;
-  final List<dynamic> combisData;
-  final String selectedRoute;
-
-  const MobileTabWidget({
-    Key? key,
-    required this.title,
-    required this.combisData,
-    required this.selectedRoute,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    // Filtramos los combis según la línea seleccionada (se espera "Línea X").
-    List<dynamic> filteredCombis = [];
-    if (selectedRoute.isNotEmpty) {
-      final String selectedLine = selectedRoute.split(" ").last;
-      filteredCombis = combisData.where((combi) => combi['linea'].toString() == selectedLine).toList();
-    }
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.indigo,
-      ),
-      body: (filteredCombis.isEmpty)
-          ? Center(child: Text("Seleccione una línea para ver los datos del móvil."))
-          : ListView.builder(
-              itemCount: filteredCombis.length,
-              itemBuilder: (context, index) {
-                final combi = filteredCombis[index];
-                final chofer = combi['chofer'];
-                final horario = combi['horario'];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                  elevation: 3.0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    title: Text("Línea: ${combi['linea']} - Placa: ${combi['placa']}",
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Chofer: ${chofer['nombre']} ${chofer['apellidos']}"),
-                        Text("Modelo: ${combi['modelo']}"),
-                        Text("Horario: ${horario['horaPartida']} - ${horario['horaLlegada']}"),
-                        Text("Tiempo de llegada: ${horario['tiempoLlegada']}"),
-                        if (combi['ubicaciones'] != null && combi['ubicaciones'].isNotEmpty)
-                          Text("Última ubicación: ${combi['ubicaciones'].last['nombreLugar']}"),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
     );
   }
 }

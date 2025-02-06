@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 class ServiceLogin {
   String url = ApiService.url;
 
-  Future<Usuario?> login(String usuario, String contrasena) async {
+  /*Future<Usuario?> login(String usuario, String contrasena) async {
     final url = Uri.parse('${this.url}/usuarios/login');
     final headers = {'Content-Type': 'application/json'};
     final body = json.encode({
@@ -26,6 +26,34 @@ class ServiceLogin {
       if (response.statusCode == 201) {
         final data = json.decode(response.body);
         return Usuario.fromJson(data['data']); // Mapear los datos del usuario
+      } else if (response.statusCode == 401) {
+        return null;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print('Error al conectar con el servidor: $e');
+      return null;
+    }
+  }*/
+  Future<Map<String, dynamic>?> login(String usuario, String contrasena) async {
+    final url = Uri.parse('${this.url}/usuarios/login');
+    final headers = {'Content-Type': 'application/json'};
+    final body = json.encode({
+      'usuario': usuario,
+      'contraseña': contrasena, // Verifica que el backend espera esta clave
+    });
+
+    try {
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: body,
+      );
+
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body);
+        return data['data']; // Mapear los datos del usuario
       } else if (response.statusCode == 401) {
         return null;
       } else {

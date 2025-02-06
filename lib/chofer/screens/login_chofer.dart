@@ -13,7 +13,7 @@ class LoginPage extends StatelessWidget {
 
   LoginPage({super.key});
 
-  void handleLogin(BuildContext context) async {
+  /*void handleLogin(BuildContext context) async {
     final usuario = userController.text;
     final contrasena = passwordController.text;
 
@@ -43,6 +43,50 @@ class LoginPage extends StatelessWidget {
         // Usuario o contraseña incorrectos
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Usuario o contraseña incorrecto')),
+        );
+      }
+    } catch (e) {
+      // Error de conexión o servidor
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al conectar con el servidor: $e')),
+      );
+    }
+  }*/
+  void handleLogin(BuildContext context) async {
+    final usuario = userController.text;
+    final contrasena = passwordController.text;
+
+    try {
+      // Llamar al servicio de login
+      Map<String, dynamic>? data = await serviceLogin.login(usuario, contrasena);
+
+      if (data != null) {
+        // Redirigir según el tipo de usuario
+        if (data["tipo"] == "Administrador") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AdminDashboardPage(usuario: data),
+            ),
+          );
+        } else if (data["tipo"] == "Conductor") {
+          Usuario usuario = Usuario.fromJson(data);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MapPageConductor(usuario: usuario),
+            ),
+          );
+        } else {
+          // Manejo de otros tipos de usuarios si aplica
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Tipo de usuario desconocido: ${data["tipo"]}')),
+          );
+        }
+      } else {
+        // Usuario o contraseña incorrectos
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Usuario o contraseña incorrecto')),
         );
       }
     } catch (e) {
