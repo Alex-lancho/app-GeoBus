@@ -1,11 +1,11 @@
-import 'package:app_ruta/administrador/data/services/alert_service.dart';
-import 'package:app_ruta/administrador/data/services/combi_service.dart';
-import 'package:app_ruta/administrador/data/services/driver_service.dart';
-import 'package:app_ruta/administrador/data/services/evaluation_service.dart';
-import 'package:app_ruta/administrador/data/services/location_service.dart';
-import 'package:app_ruta/administrador/data/services/notification_service.dart';
-import 'package:app_ruta/administrador/data/services/route_service.dart';
-import 'package:app_ruta/administrador/data/services/shedul_service.dart';
+import 'package:app_ruta/data/providers/alert_service.dart';
+import 'package:app_ruta/data/providers/combi_service.dart';
+import 'package:app_ruta/data/providers/driver_service.dart';
+import 'package:app_ruta/data/providers/evaluation_service.dart';
+import 'package:app_ruta/data/providers/location_service.dart';
+import 'package:app_ruta/data/providers/notification_service.dart';
+import 'package:app_ruta/data/providers/route_service.dart';
+import 'package:app_ruta/data/providers/shedul_service.dart';
 import 'package:app_ruta/administrador/screens/alerts_screens.dart';
 import 'package:app_ruta/administrador/screens/combis_screens.dart';
 import 'package:app_ruta/administrador/screens/drivers_screen.dart';
@@ -47,7 +47,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     try {
       final int choferCount = await DriverService().getDriverCount();
       final int combiCount = await CombiService().getCombiCount();
-      final int rutaCount = await RouteService().getRouteCount();
+      final int rutaCount = 5; //await RouteService().getRouteCount();
       final int alertaCount = await AlertService().getAlertaCount();
       final int notificacionCount = await NotificationService().getNotificationCount();
       final int evaluacionCount = await EvaluationService().getEvaluationCount();

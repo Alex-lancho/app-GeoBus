@@ -34,7 +34,7 @@ class MapClient extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.indigo,
+        backgroundColor: const Color.fromARGB(227, 29, 146, 144),
         actions: [
           IconButton(
             icon: const Icon(Icons.change_circle),

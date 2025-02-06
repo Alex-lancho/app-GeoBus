@@ -1,7 +1,7 @@
-import 'package:app_ruta/administrador/data/models/alert_model.dart';
-import 'package:app_ruta/administrador/data/models/combi_model.dart';
-import 'package:app_ruta/administrador/data/services/alert_service.dart';
-import 'package:app_ruta/administrador/data/services/combi_service.dart';
+import 'package:app_ruta/data/models/alert_model.dart';
+import 'package:app_ruta/data/models/combi_model.dart';
+import 'package:app_ruta/data/providers/alert_service.dart';
+import 'package:app_ruta/data/providers/combi_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';

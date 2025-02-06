@@ -1,6 +1,6 @@
 // ubicacion_api_service.dart
 import 'dart:convert';
-import 'package:app_ruta/administrador/data/models/location_model.dart';
+import 'package:app_ruta/data/models/location_model.dart';
 import 'package:app_ruta/services/api_service.dart';
 import 'package:http/http.dart' as http;
 
@@ -89,7 +89,7 @@ class LocationService {
 
   //Cantidad de registros
   Future<int> getLocationCount() async {
-    final response = await http.get(Uri.parse('$baseUrl/count'));
+    final response = await http.get(Uri.parse('$baseUrl/total'));
     if (response.statusCode == 200) {
       // Se asume que el endpoint retorna un número en formato JSON, por ejemplo: 42
       return jsonDecode(response.body) as int;

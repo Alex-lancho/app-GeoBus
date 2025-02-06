@@ -1,7 +1,7 @@
-import 'package:app_ruta/administrador/data/services/driver_service.dart';
+import 'package:app_ruta/data/providers/driver_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:app_ruta/administrador/data/models/driver_model.dart';
+import 'package:app_ruta/data/models/driver_model.dart';
 
 class DriversScreen extends StatefulWidget {
   @override

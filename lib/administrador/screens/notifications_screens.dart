@@ -1,5 +1,5 @@
-import 'package:app_ruta/administrador/data/models/notification_model.dart';
-import 'package:app_ruta/administrador/data/services/notification_service.dart';
+import 'package:app_ruta/data/models/notification_model.dart';
+import 'package:app_ruta/data/providers/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 

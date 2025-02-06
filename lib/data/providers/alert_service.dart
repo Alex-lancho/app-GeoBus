@@ -1,6 +1,6 @@
 // alerta_api_service.dart
 import 'dart:convert';
-import 'package:app_ruta/administrador/data/models/alert_model.dart';
+import 'package:app_ruta/data/models/alert_model.dart';
 import 'package:app_ruta/services/api_service.dart';
 import 'package:http/http.dart' as http;
 
@@ -74,12 +74,23 @@ class AlertService {
 
   //Cantidad de Alertas
   Future<int> getAlertaCount() async {
-    final response = await http.get(Uri.parse('$baseUrl/count'));
+    final response = await http.get(Uri.parse('$baseUrl/total'));
     if (response.statusCode == 200) {
       // Se asume que el endpoint retorna un número en formato JSON, por ejemplo: 42
       return jsonDecode(response.body) as int;
     } else {
       throw Exception('Error al obtener la cantidad de ubicaciones');
+    }
+  }
+
+  // GET: Obtener alertas por idChofer
+  Future<List<AlertModel>> getAlertasByChofer(String idChofer) async {
+    final response = await http.get(Uri.parse('$baseUrl/listAlert/$idChofer'));
+    if (response.statusCode == 200) {
+      final List<dynamic> body = jsonDecode(response.body);
+      return body.map((json) => AlertModel.fromJson(json)).toList();
+    } else {
+      throw Exception('Error al cargar las alertas para el chofer $idChofer');
     }
   }
 }
