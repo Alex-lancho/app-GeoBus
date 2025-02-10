@@ -5,29 +5,19 @@ class MapClient extends StatelessWidget {
   final String title;
   final MapType mapType;
   final CameraPosition initialCameraPosition;
-  final Set<Marker> markers;
-  final Set<Polyline> polylines;
-  final Map<String, List<LatLng>> routePaths;
-  final String selectedRoute;
-  final Function(String) onRouteSelected;
   final Function(GoogleMapController) onMapCreated;
   final Function(MapType) onMapTypeChanged;
   final VoidCallback onChangeRole;
 
   const MapClient({
-    super.key,
+    Key? key,
     required this.title,
     required this.mapType,
     required this.initialCameraPosition,
-    required this.markers,
-    required this.polylines,
-    required this.routePaths,
-    required this.selectedRoute,
-    required this.onRouteSelected,
     required this.onMapCreated,
     required this.onMapTypeChanged,
     required this.onChangeRole,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -57,56 +47,12 @@ class MapClient extends StatelessWidget {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Dropdown estilizado.
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 6.0,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: DropdownButton<String>(
-                isExpanded: true,
-                underline: Container(),
-                hint: Text("Selecciona una línea", style: TextStyle(fontSize: 16)),
-                value: selectedRoute.isEmpty ? null : selectedRoute,
-                items: routePaths.keys
-                    .map((line) => DropdownMenuItem<String>(
-                          value: line,
-                          child: Text(line, style: TextStyle(fontSize: 16)),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    onRouteSelected(value);
-                  }
-                },
-              ),
-            ),
-          ),
-          // Mapa.
-          Expanded(
-            child: GoogleMap(
-              onMapCreated: onMapCreated,
-              initialCameraPosition: initialCameraPosition,
-              markers: markers,
-              polylines: polylines,
-              mapType: mapType,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: true,
-            ),
-          ),
-        ],
+      body: GoogleMap(
+        onMapCreated: onMapCreated,
+        initialCameraPosition: initialCameraPosition,
+        mapType: mapType,
+        myLocationEnabled: true,
+        myLocationButtonEnabled: true,
       ),
     );
   }

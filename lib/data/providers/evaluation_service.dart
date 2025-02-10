@@ -31,10 +31,10 @@ class EvaluationService {
 
   /// POST: Crear una nueva evaluación
   /// El endpoint espera un objeto con { data: Partial<Evaluacion>, idCombi: string }
-  Future<EvaluationModel> createEvaluacion(Map<String, dynamic> evaluacionData, String idCombi) async {
+  Future<EvaluationModel> createEvaluacion(Map<String, dynamic> evaluacionData, String idChofer) async {
     final Map<String, dynamic> payload = {
       'data': evaluacionData,
-      'idCombi': idCombi,
+      'idChofer': idChofer,
     };
 
     final response = await http.post(

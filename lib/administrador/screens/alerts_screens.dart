@@ -1,7 +1,7 @@
 import 'package:app_ruta/data/models/alert_model.dart';
-import 'package:app_ruta/data/models/combi_model.dart';
+import 'package:app_ruta/data/models/driver_model.dart';
 import 'package:app_ruta/data/providers/alert_service.dart';
-import 'package:app_ruta/data/providers/combi_service.dart';
+import 'package:app_ruta/data/providers/driver_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
@@ -55,7 +55,7 @@ class _AlertsScreensState extends State<AlertsScreens> {
         TextEditingController(text: selectedTime != null ? selectedTime.format(context) : '');
 
     // Variable local para almacenar el id de la combi seleccionada (solo en creación)
-    String? selectedCombiId;
+    String? selectedChoferId;
 
     showDialog(
       context: context,
@@ -73,32 +73,32 @@ class _AlertsScreensState extends State<AlertsScreens> {
                     children: [
                       // Si estamos creando, se muestra el dropdown para seleccionar combi
                       if (!isEditing)
-                        FutureBuilder<List<CombiModel>>(
-                          future: CombiService().getAllCombis(),
+                        FutureBuilder<List<DriverModel>>(
+                          future: DriverService().getChoferes(),
                           builder: (context, snapshot) {
                             if (snapshot.hasData) {
-                              List<CombiModel> combis = snapshot.data!;
+                              List<DriverModel> combis = snapshot.data!;
                               return DropdownButtonFormField<String>(
                                 decoration: InputDecoration(
-                                  labelText: 'Combi',
+                                  labelText: 'Chofer',
                                   border: OutlineInputBorder(),
                                 ),
-                                items: combis.map((combi) {
+                                items: combis.map((chofer) {
                                   return DropdownMenuItem<String>(
-                                    value: combi.idCombi,
-                                    child: Text(combi.placa),
+                                    value: chofer.idChofer,
+                                    child: Text('${chofer.nombre} ${chofer.apellidos}'),
                                   );
                                 }).toList(),
-                                value: selectedCombiId,
+                                value: selectedChoferId,
                                 onChanged: (value) {
                                   setStateDialog(() {
-                                    selectedCombiId = value;
+                                    selectedChoferId = value;
                                   });
                                 },
-                                validator: (value) => (value == null || value.isEmpty) ? 'Seleccione una combi' : null,
+                                validator: (value) => (value == null || value.isEmpty) ? 'Seleccione un chofer' : null,
                               );
                             } else if (snapshot.hasError) {
-                              return Text('Error al cargar combis');
+                              return Text('Error al cargar chofer');
                             } else {
                               return Center(child: CircularProgressIndicator());
                             }
@@ -167,13 +167,13 @@ class _AlertsScreensState extends State<AlertsScreens> {
                           await AlertService().updateAlerta(alert.idAlerta, data);
                         } else {
                           // En creación, es obligatorio haber seleccionado una combi
-                          if (selectedCombiId == null) {
+                          if (selectedChoferId == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Seleccione una combi')),
                             );
                             return;
                           }
-                          await AlertService().createAlerta(data, selectedCombiId!);
+                          await AlertService().createAlerta(data, selectedChoferId!);
                         }
                         Navigator.of(context).pop();
                         fetchAlerts();

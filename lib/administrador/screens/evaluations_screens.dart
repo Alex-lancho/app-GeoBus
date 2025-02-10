@@ -1,6 +1,6 @@
+import 'package:app_ruta/data/models/driver_model.dart';
 import 'package:app_ruta/data/models/evaluation_model.dart';
-import 'package:app_ruta/data/models/combi_model.dart';
-import 'package:app_ruta/data/providers/combi_service.dart';
+import 'package:app_ruta/data/providers/driver_service.dart';
 import 'package:app_ruta/data/providers/evaluation_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
@@ -57,7 +57,7 @@ class _EvaluationsScreensState extends State<EvaluationsScreens> {
         TextEditingController(text: isEditing ? evaluation.descripcion : '');
 
     // Variable local para almacenar el id de la combi seleccionada (solo en creación)
-    String? selectedCombiId;
+    String? selectedChofeId;
 
     showDialog(
       context: context,
@@ -75,32 +75,32 @@ class _EvaluationsScreensState extends State<EvaluationsScreens> {
                     children: [
                       // Si estamos creando, se muestra el dropdown para seleccionar combi
                       if (!isEditing)
-                        FutureBuilder<List<CombiModel>>(
-                          future: CombiService().getAllCombis(),
+                        FutureBuilder<List<DriverModel>>(
+                          future: DriverService().getChoferes(),
                           builder: (context, snapshot) {
                             if (snapshot.hasData) {
-                              List<CombiModel> combis = snapshot.data!;
+                              List<DriverModel> chofer = snapshot.data!;
                               return DropdownButtonFormField<String>(
                                 decoration: InputDecoration(
-                                  labelText: 'Combi',
+                                  labelText: 'Chofer',
                                   border: OutlineInputBorder(),
                                 ),
-                                items: combis.map((combi) {
+                                items: chofer.map((chofer) {
                                   return DropdownMenuItem<String>(
-                                    value: combi.idCombi,
-                                    child: Text(combi.placa),
+                                    value: chofer.idChofer,
+                                    child: Text('${chofer.nombre} ${chofer.apellidos}'),
                                   );
                                 }).toList(),
-                                value: selectedCombiId,
+                                value: selectedChofeId,
                                 onChanged: (value) {
                                   setStateDialog(() {
-                                    selectedCombiId = value;
+                                    selectedChofeId = value;
                                   });
                                 },
-                                validator: (value) => (value == null || value.isEmpty) ? 'Seleccione una combi' : null,
+                                validator: (value) => (value == null || value.isEmpty) ? 'Seleccione un chofer' : null,
                               );
                             } else if (snapshot.hasError) {
-                              return Text('Error al cargar combis');
+                              return Text('Error los choferes');
                             } else {
                               return Center(child: CircularProgressIndicator());
                             }
@@ -212,13 +212,13 @@ class _EvaluationsScreensState extends State<EvaluationsScreens> {
                           await EvaluationService().updateEvaluacion(evaluation.idEvaluacion, data);
                         } else {
                           // Si estamos creando, es obligatorio haber seleccionado una combi
-                          if (selectedCombiId == null) {
+                          if (selectedChofeId == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Seleccione una combi')),
+                              SnackBar(content: Text('Seleccione un chofer')),
                             );
                             return;
                           }
-                          await EvaluationService().createEvaluacion(data, selectedCombiId!);
+                          await EvaluationService().createEvaluacion(data, selectedChofeId!);
                         }
                         Navigator.of(context).pop();
                         fetchEvaluations();

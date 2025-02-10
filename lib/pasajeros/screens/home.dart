@@ -30,7 +30,7 @@ class _MapPageClienteState extends State<MapPageCliente> {
   // Icono personalizado para la combi.
   BitmapDescriptor? _combiIcon;
 
-  // Valor seleccionado en el Dropdown (ej: "Línea 3").
+  // Valor seleccionado en el Dropdown (ej: "Ruta 3").
   String _selectedRoute = "";
   int _currentIndex = 1;
 
@@ -78,28 +78,30 @@ class _MapPageClienteState extends State<MapPageCliente> {
     final Map<String, List<LatLng>> loadedRoutes = {};
 
     for (var combi in combis) {
-      final String linea = "Línea ${combi['linea']}";
-      final List<dynamic> rutas = combi['rutas'];
+      if (combi['linea'] != '') {
+        final String linea = "Ruta ${combi['linea']}";
+        final List<dynamic> rutas = combi['rutas'];
 
-      if (!loadedRoutes.containsKey(linea)) {
-        loadedRoutes[linea] = [];
-      }
+        if (!loadedRoutes.containsKey(linea)) {
+          loadedRoutes[linea] = [];
+        }
 
-      for (var ruta in rutas) {
-        final double? lat = double.tryParse(ruta['ejeX'].replaceAll(',', '.'));
-        final double? lng = double.tryParse(ruta['ejeY'].replaceAll(',', '.'));
+        for (var ruta in rutas) {
+          final double? lat = double.tryParse(ruta['ejeX'].replaceAll(',', '.'));
+          final double? lng = double.tryParse(ruta['ejeY'].replaceAll(',', '.'));
 
-        if (lat != null && lng != null) {
-          loadedRoutes[linea]!.add(LatLng(lat, lng));
-        } else {
-          print("Error en coordenadas: ${ruta['ejeX']} , ${ruta['ejeY']}");
+          if (lat != null && lng != null) {
+            loadedRoutes[linea]!.add(LatLng(lat, lng));
+          } else {
+            print("Error en coordenadas: ${ruta['ejeX']} , ${ruta['ejeY']}");
+          }
         }
       }
     }
 
     setState(() {
       routePaths = loadedRoutes;
-      combisData = combis; // Se guardan los datos para la pestaña "Movil"
+      combisData = combis; // Se guardan los datos para la pestaña "Móvil"
     });
   }
 
@@ -123,10 +125,10 @@ class _MapPageClienteState extends State<MapPageCliente> {
       if (combis.isNotEmpty) {
         String? selectedLine;
         if (_selectedRoute.isNotEmpty) {
-          // De "Línea 3" se extrae "3"
+          // De "Ruta 3" se extrae "3"
           selectedLine = _selectedRoute.split(" ").last;
         }
-        // Filtramos el combi por línea si se seleccionó una; de lo contrario, tomamos el primer combi con ubicaciones.
+        // Filtramos el combi por línea si se seleccionó una; de lo contrario, tomamos el primero con ubicaciones.
         var combi = (selectedLine != null)
             ? combis.firstWhere(
                 (c) => c['linea'].toString() == selectedLine && c['ubicaciones'] != null && c['ubicaciones'].isNotEmpty,
@@ -165,14 +167,15 @@ class _MapPageClienteState extends State<MapPageCliente> {
                 // Actualizamos la trayectoria completa.
                 combiPath = newCombiPath;
                 _polylines.removeWhere((polyline) => polyline.polylineId.value == 'combi_path');
-                _polylines.add(
+                /* linea de la ubicacion
+                 _polylines.add( de
                   Polyline(
                     polylineId: PolylineId('combi_path'),
                     points: combiPath,
                     color: Colors.green.withOpacity(0.5),
                     width: 4,
                   ),
-                );
+                );*/
               });
             }
           } else {
@@ -212,15 +215,15 @@ class _MapPageClienteState extends State<MapPageCliente> {
   }
 
   /// Dibuja la ruta seleccionada a partir de los puntos de la línea.
-  /// Se elimina cualquier polyline previa de rutas (cuyos ids empiecen con "Línea")
+  /// Se elimina cualquier polyline previa de rutas (cuyos ids empiecen con "Ruta")
   /// para mostrar únicamente la ruta correspondiente a la línea seleccionada.
   void _selectRoute(String route) {
     if (!routePaths.containsKey(route)) return;
     final List<LatLng> routePoints = routePaths[route] ?? [];
     if (routePoints.isNotEmpty) {
       setState(() {
-        // Eliminamos todas las polylines de rutas (identificadas por un id que comienza con "Línea").
-        _polylines.removeWhere((p) => p.polylineId.value.startsWith("Línea"));
+        // Eliminamos todas las polylines de rutas (identificadas por un id que comienza con "Ruta").
+        _polylines.removeWhere((p) => p.polylineId.value.startsWith("Ruta"));
         // Agregamos la polyline de la ruta seleccionada.
         _polylines.add(Polyline(
           polylineId: PolylineId(route),
@@ -229,23 +232,24 @@ class _MapPageClienteState extends State<MapPageCliente> {
           width: 5,
         ));
         // Actualizamos los marcadores de inicio, intermedio y fin.
-        _markers
-            .removeWhere((m) => m.markerId.value == 'start' || m.markerId.value == 'mid' || m.markerId.value == 'end');
+        _markers.removeWhere(
+          (m) => m.markerId.value == 'start' || m.markerId.value == 'mid' || m.markerId.value == 'end',
+        );
         final start = routePoints.first;
         final end = routePoints.last;
-        final mid = routePoints[(routePoints.length / 2).floor()];
+        //final mid = routePoints[(routePoints.length / 2).floor()];
         _markers.add(Marker(
           markerId: MarkerId('start'),
           position: start,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           infoWindow: InfoWindow(title: "Inicio"),
         ));
-        _markers.add(Marker(
+        /*_markers.add(Marker(
           markerId: MarkerId('mid'),
           position: mid,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
           infoWindow: InfoWindow(title: "Intermedio"),
-        ));
+        ));*/
         _markers.add(Marker(
           markerId: MarkerId('end'),
           position: end,
@@ -285,7 +289,7 @@ class _MapPageClienteState extends State<MapPageCliente> {
 
         // Creamos una lista de pestañas (cada una simulando su propio Scaffold).
         final List<Widget> tabs = [
-          MapRute(
+          MapClient(
             title: "Mapa Cliente",
             mapType: _currentMapType,
             initialCameraPosition: _initialCameraPosition,
@@ -293,7 +297,7 @@ class _MapPageClienteState extends State<MapPageCliente> {
             onMapTypeChanged: _onMapTypeChanged,
             onChangeRole: () => Preferences.changeRole(context, 'conductor'),
           ),
-          MapClient(
+          MapRoute(
             title: "Ruta",
             mapType: _currentMapType,
             initialCameraPosition: _initialCameraPosition,
@@ -332,11 +336,10 @@ class _MapPageClienteState extends State<MapPageCliente> {
                 label: 'Mapa',
               ),
               NavigationDestination(
-                  selectedIcon: Icon(Icons.directions, color: Color.fromARGB(255, 255, 255, 255)),
-                  icon: Icon(
-                    Icons.directions_outlined,
-                  ),
-                  label: 'Ruta'),
+                selectedIcon: Icon(Icons.directions, color: Color.fromARGB(255, 255, 255, 255)),
+                icon: Icon(Icons.directions_outlined),
+                label: 'Ruta',
+              ),
               NavigationDestination(
                 selectedIcon: Badge(
                   label: Text("2"),

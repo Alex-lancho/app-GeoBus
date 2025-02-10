@@ -1,12 +1,9 @@
-import 'package:app_ruta/data/models/alert_model.dart';
-import 'package:app_ruta/data/providers/alert_service.dart';
+import 'package:app_ruta/pasajeros/widgets/alerts_dialog.dart';
+import 'package:app_ruta/pasajeros/widgets/action_button.dart';
+import 'package:app_ruta/pasajeros/widgets/evaluation_dialog.dart';
+import 'package:app_ruta/pasajeros/widgets/notification_dialog.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:app_ruta/data/providers/evaluation_service.dart';
 
-/// ===========================================================================
-/// Widget principal que muestra la información de la combi y las acciones
-/// ===========================================================================
 class BusData extends StatelessWidget {
   final String title;
   final List<dynamic> combisData;
@@ -21,30 +18,49 @@ class BusData extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Filtra las combis según la línea seleccionada (se espera algo tipo "Línea X").
     List<dynamic> filteredCombis = [];
     if (selectedRoute.isNotEmpty) {
       final String selectedLine = selectedRoute.split(" ").last;
       filteredCombis = combisData.where((combi) => combi['linea'].toString() == selectedLine).toList();
     }
 
-    final theme = Theme.of(context);
-
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
         title: Text(
           title,
-          style: theme.textTheme.titleMedium?.copyWith(
+          style: const TextStyle(
+            fontSize: 20,
             fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
         ),
         centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
       body: filteredCombis.isEmpty
           ? Center(
-              child: Text(
-                "Seleccione una línea para ver los datos del móvil.",
-                style: theme.textTheme.bodyMedium,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.directions_bus_outlined,
+                    size: 80,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Seleccione una línea\npara ver los datos del móvil",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                      height: 1.5,
+                    ),
+                  ),
+                ],
               ),
             )
           : _buildSingleView(context, filteredCombis.first),
@@ -52,546 +68,260 @@ class BusData extends StatelessWidget {
   }
 
   Widget _buildSingleView(BuildContext context, dynamic combi) {
-    final theme = Theme.of(context);
     final chofer = combi['chofer'];
     final horario = combi['horario'];
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Encabezado con icono y título
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.account_circle_outlined,
-                size: 60,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Datos Del Conductor",
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+          // Header Section
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
                 ),
-              )
-            ],
-          ),
-          const SizedBox(height: 24),
-          // Card principal con los datos del conductor y combi
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            color: const Color.fromARGB(227, 29, 146, 144),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Datos del conductor a la izquierda
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Conductor: ${chofer['nombre']} ${chofer['apellidos']}",
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Modelo: ${combi['modelo']}",
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Horario: ${horario['horaPartida']} - ${horario['horaLlegada']}",
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Tiempo de llegada: ${horario['tiempoLlegada']}",
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onPrimary,
-                          ),
-                        ),
-                        if (combi['ubicaciones'] != null && combi['ubicaciones'].isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              "Última ubicación: ${combi['ubicaciones'].last['nombreLugar']}",
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onPrimary,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Icono del bus a la derecha
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Icon(
-                      Icons.directions_bus_filled_outlined,
-                      size: 36,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          // Sección de acciones
-          Text(
-            'Acciones a Realizar',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            children: [
-              _AccionBoton(
-                iconData: Icons.warning_amber_rounded,
-                label: 'Alertas',
-                onPressed: () {
-                  // Abre el modal de alertas que consulta getAlertasByChofer.
-                  // Se asume que en el objeto 'chofer' se encuentra el id, por ejemplo, chofer['idChofer']
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertasDialog(idChofer: chofer['idChofer']),
-                  );
-                },
-              ),
-              _AccionBoton(
-                iconData: Icons.star_border,
-                label: 'Evaluar',
-                onPressed: () {
-                  // Abre el modal de evaluación directamente
-                  showDialog(
-                    context: context,
-                    builder: (context) => EvaluationDialog(idCombi: combi['idCombi']),
-                  );
-                },
-              ),
-              _AccionBoton(
-                iconData: Icons.notifications,
-                label: 'Notificación',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => NotificationScreen(idCombi: combi['idCombi']),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Botón de acción reutilizable
-class _AccionBoton extends StatelessWidget {
-  final IconData iconData;
-  final String label;
-  final VoidCallback onPressed;
-
-  const _AccionBoton({
-    Key? key,
-    required this.iconData,
-    required this.label,
-    required this.onPressed,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return FilledButton(
-      style: ButtonStyle(
-        padding: MaterialStateProperty.all(
-          const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        ),
-        shape: MaterialStateProperty.all(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
-      onPressed: onPressed,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(iconData, color: colorScheme.onPrimary),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(color: colorScheme.onPrimary),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// ===========================================================================
-/// Diálogo de Alertas
-/// Consulta getAlertasByChofer y muestra la lista de alertas asociadas al chofer
-/// ===========================================================================
-class AlertasDialog extends StatelessWidget {
-  final String idChofer;
-
-  const AlertasDialog({Key? key, required this.idChofer}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Row(
-        children: const [
-          Icon(Icons.warning_amber_rounded, color: Colors.orange),
-          SizedBox(width: 8),
-          Text('Alertas'),
-        ],
-      ),
-      content: FutureBuilder<List<AlertModel>>(
-        future: AlertService().getAlertasByChofer(idChofer),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const SizedBox(
-              height: 100,
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasError) {
-            return Text('Error: ${snapshot.error}');
-          }
-          if (snapshot.hasData) {
-            final alertas = snapshot.data!;
-            if (alertas.isEmpty) {
-              return const Text('No hay alertas disponibles.');
-            }
-            return SizedBox(
-              // Ajusta el alto según tus necesidades
-              height: 200,
-              width: double.maxFinite,
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: alertas.length,
-                itemBuilder: (context, index) {
-                  final alerta = alertas[index];
-                  return ListTile(
-                    title: Text(alerta.hora.toString()),
-                    subtitle: Text(alerta.descripcion),
-                  );
-                },
-              ),
-            );
-          }
-          return const Text('No hay datos.');
-        },
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cerrar'),
-        ),
-      ],
-    );
-  }
-}
-
-/// ===========================================================================
-/// Diálogo de Evaluación
-/// Al enviar la evaluación se muestra un resumen de los datos enviados
-/// ===========================================================================
-class EvaluationDialog extends StatefulWidget {
-  final String idCombi;
-
-  const EvaluationDialog({Key? key, required this.idCombi}) : super(key: key);
-
-  @override
-  State<EvaluationDialog> createState() => _EvaluationDialogState();
-}
-
-class _EvaluationDialogState extends State<EvaluationDialog> {
-  final _formKey = GlobalKey<FormState>();
-  String? puntualidad;
-  double comodidad = 3;
-  DateTime? fecha;
-  final TextEditingController descripcionController = TextEditingController();
-
-  @override
-  void dispose() {
-    descripcionController.dispose();
-    super.dispose();
-  }
-
-  void _submitEvaluation() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      _formKey.currentState?.save();
-      final data = {
-        'puntualidad': puntualidad,
-        'comodidad': comodidad.toStringAsFixed(0),
-        'fecha': fecha != null ? DateFormat('yyyy-MM-dd').format(fecha!) : '',
-        'descripcion': descripcionController.text,
-      };
-
-      try {
-        await EvaluationService().createEvaluacion(data, widget.idCombi);
-        // Mostrar resumen de lo enviado en un diálogo adicional
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Evaluación Enviada'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Puntualidad: $puntualidad"),
-                Text("Comodidad: ${comodidad.toStringAsFixed(0)}"),
-                Text("Fecha: ${fecha != null ? DateFormat('yyyy-MM-dd').format(fecha!) : ''}"),
-                Text("Descripción: ${descripcionController.text}"),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Cierra el resumen
-                  Navigator.of(context).pop(); // Cierra el diálogo de evaluación
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al enviar evaluación: $e')),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Nueva Evaluación'),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Selección de puntualidad ("Sí" o "No")
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Puntualidad',
-                  border: OutlineInputBorder(),
-                ),
-                value: puntualidad,
-                items: ['Sí', 'No'].map((option) {
-                  return DropdownMenuItem<String>(
-                    value: option,
-                    child: Text(option),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    puntualidad = value;
-                  });
-                },
-                validator: (value) => value == null || value.isEmpty ? 'Seleccione una opción' : null,
-              ),
-              const SizedBox(height: 16),
-              // Slider para comodidad
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Comodidad: ${comodidad.toStringAsFixed(0)}'),
-                  Slider(
-                    value: comodidad,
-                    min: 1,
-                    max: 5,
-                    divisions: 4,
-                    label: comodidad.toStringAsFixed(0),
-                    onChanged: (value) {
-                      setState(() {
-                        comodidad = value;
-                      });
-                    },
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    shape: BoxShape.circle,
                   ),
+                  child: Icon(
+                    Icons.account_circle_outlined,
+                    size: 50,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "Datos Del Conductor",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Driver Info Card
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF1D9290),
+                  const Color(0xFF1D9290).withOpacity(0.8),
                 ],
               ),
-              const SizedBox(height: 16),
-              // Selector de fecha (read-only)
-              TextFormField(
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Fecha',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_today),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1D9290).withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
                 ),
-                controller: TextEditingController(
-                  text: fecha != null ? DateFormat('yyyy-MM-dd').format(fecha!) : '',
+              ],
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -20,
+                  top: -20,
+                  child: Icon(
+                    Icons.directions_bus,
+                    size: 100,
+                    color: Colors.white.withOpacity(0.1),
+                  ),
                 ),
-                onTap: () async {
-                  DateTime now = DateTime.now();
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: fecha ?? now,
-                    firstDate: DateTime(now.year - 5),
-                    lastDate: DateTime(now.year + 5),
-                  );
-                  if (picked != null) {
-                    setState(() {
-                      fecha = picked;
-                    });
-                  }
-                },
-                validator: (value) => fecha == null ? 'Seleccione la fecha' : null,
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildInfoRow(
+                        Icons.person,
+                        "Conductor",
+                        "${chofer['nombre']} ${chofer['apellidos']}",
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInfoRow(
+                        Icons.directions_bus_filled,
+                        "Modelo",
+                        combi['modelo'],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInfoRow(
+                        Icons.access_time,
+                        "Horario",
+                        "${horario['horaPartida']} - ${horario['horaLlegada']}",
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInfoRow(
+                        Icons.timer,
+                        "Tiempo de llegada",
+                        horario['tiempoLlegada'],
+                      ),
+                      if (combi['ubicaciones'] != null && combi['ubicaciones'].isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        _buildInfoRow(
+                          Icons.location_on,
+                          "Última ubicación",
+                          combi['ubicaciones'].last['nombreLugar'],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Actions Section
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Acciones a Realizar',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildActionButton(
+                      context,
+                      Icons.warning_amber_rounded,
+                      'Alertas',
+                      Colors.orange,
+                      () => showDialog(
+                        context: context,
+                        builder: (context) => AlertsDialog(idChofer: chofer['idChofer']),
+                      ),
+                    ),
+                    _buildActionButton(
+                      context,
+                      Icons.star_border,
+                      'Evaluar',
+                      Colors.blue,
+                      () => showDialog(
+                        context: context,
+                        builder: (context) => EvaluationDialog(idChofer: chofer['idChofer']),
+                      ),
+                    ),
+                    _buildActionButton(
+                      context,
+                      Icons.notifications,
+                      'Notificación',
+                      Colors.green,
+                      () => showDialog(
+                        context: context,
+                        builder: (context) => const NotificationDialog(),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.white70, size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
               ),
-              const SizedBox(height: 16),
-              // Campo de descripción
-              TextFormField(
-                controller: descripcionController,
-                decoration: const InputDecoration(
-                  labelText: 'Descripción',
-                  border: OutlineInputBorder(),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                 ),
-                maxLines: 3,
-                validator: (value) => value == null || value.isEmpty ? 'Ingrese la descripción' : null,
               ),
             ],
           ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: _submitEvaluation,
-          child: const Text('Enviar Evaluación'),
         ),
       ],
     );
   }
-}
 
-/// ===========================================================================
-/// Pantalla para Notificación (se mantiene igual, solo se muestra por ejemplo)
-/// ===========================================================================
-class NotificationScreen extends StatefulWidget {
-  final String idCombi;
-
-  const NotificationScreen({Key? key, required this.idCombi}) : super(key: key);
-
-  @override
-  State<NotificationScreen> createState() => _NotificationScreenState();
-}
-
-class _NotificationScreenState extends State<NotificationScreen> {
-  final _formKey = GlobalKey<FormState>();
-  String tipo = '';
-  String descripcion = '';
-  String nombreCompleto = '';
-  String dni = '';
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Enviar Notificación'),
-        centerTitle: true,
-      ),
-      body: Padding(
+  Widget _buildActionButton(
+    BuildContext context,
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onPressed,
+  ) {
+    return InkWell(
+      onTap: onPressed,
+      child: Container(
         padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              const Icon(Icons.notifications_active, size: 60, color: Colors.lightBlue),
-              const SizedBox(height: 16),
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Tipo',
-                        border: OutlineInputBorder(),
-                      ),
-                      onSaved: (value) => tipo = value ?? '',
-                      validator: (value) => value == null || value.isEmpty ? 'Ingrese el tipo de notificación' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Descripción',
-                        border: OutlineInputBorder(),
-                      ),
-                      onSaved: (value) => descripcion = value ?? '',
-                      validator: (value) => value == null || value.isEmpty ? 'Ingrese una descripción' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre Completo',
-                        border: OutlineInputBorder(),
-                      ),
-                      onSaved: (value) => nombreCompleto = value ?? '',
-                      validator: (value) => value == null || value.isEmpty ? 'Ingrese el nombre' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'DNI',
-                        border: OutlineInputBorder(),
-                      ),
-                      onSaved: (value) => dni = value ?? '',
-                      validator: (value) => value == null || value.isEmpty ? 'Ingrese el DNI' : null,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          _formKey.currentState!.save();
-                          // Aquí se llamaría al NotificationService.createNotificacion con los datos recopilados.
-                          showDialog(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              title: const Text('Notificación enviada'),
-                              content: const Text('La notificación se envió correctamente.'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('OK'),
-                                )
-                              ],
-                            ),
-                          );
-                        }
-                      },
-                      child: const Text('Enviar Notificación'),
-                    )
-                  ],
-                ),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
